@@ -232,3 +232,14 @@ def test_duplicate_stock_code_requires_matching_specification(client, app):
         stocks = sorted(row.mojudi_vaghei for row in Inventory.query.filter_by(code_kala="DUP").all())
         assert stocks == [500, 700]
         assert Havaleh.query.count() == 0
+
+
+
+def test_upload_size_limit_is_configured(app):
+    assert app.config["MAX_CONTENT_LENGTH"] == 8 * 1024 * 1024
+
+
+def test_receipt_status_only_counts_yes_as_uploaded():
+    assert Havaleh(ghabz_por_piost="خیر", ghabz_khali_piost="خیر").vaziyat_ghabzha is None
+    assert Havaleh(ghabz_por_piost="بله", ghabz_khali_piost="خیر").vaziyat_ghabzha == "ناقص"
+    assert Havaleh(ghabz_por_piost="بله", ghabz_khali_piost="بله").vaziyat_ghabzha == "کامل"
