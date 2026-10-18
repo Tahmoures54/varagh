@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}مدیریت کاربران{% endblock %}
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-people"></i> مدیریت کاربران</h4>
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card p-4">
+      <h6 class="mb-3">ایجاد حساب کاربری</h6>
+      <form method="post">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+        <div class="mb-3">
+          <label class="form-label">نام کاربری انگلیسی</label>
+          <input class="form-control" name="username" required maxlength="80" pattern="[A-Za-z0-9_-]+" autocomplete="off">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">نام و نام خانوادگی</label>
+          <input class="form-control" name="full_name" maxlength="120">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">رمز عبور اولیه (حداقل ۱۲ نویسه)</label>
+          <input class="form-control" type="password" name="password" required minlength="12" autocomplete="new-password">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">نقش</label>
+          <select class="form-select" name="role" required>
+            {% for key, label in roles.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-primary w-100" type="submit">ایجاد کاربر</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light"><tr><th>نام کاربری</th><th>نام</th><th>نقش</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+          <tbody>
+            {% for user in users %}
+            <tr>
+              <td class="fw-bold">{{ user.username }}</td>
+              <td>{{ user.full_name or "—" }}</td>
+              <td>{{ user.role_label }}</td>
+              <td>{% if user.is_active_user %}<span class="badge bg-success">فعال</span>{% else %}<span class="badge bg-secondary">غیرفعال</span>{% endif %}</td>
+              <td>
+                {% if user.id != current_user.id %}
+                <form method="post" action="{{ url_for('user_toggle', id=user.id) }}">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                  <button class="btn btn-sm btn-outline-{% if user.is_active_user %}danger{% else %}success{% endif %}" type="submit">
+                    {% if user.is_active_user %}غیرفعال‌کردن{% else %}فعال‌کردن{% endif %}
+                  </button>
+                </form>
+                {% else %}<small class="text-muted">حساب فعلی</small>{% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-center text-muted py-4">کاربری ثبت نشده است.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
