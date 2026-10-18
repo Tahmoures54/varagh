@@ -374,6 +374,50 @@ def create_app(test_config=None):
         flash("حواله حذف شد.", "success")
         return redirect(url_for("havaleh_list"))
 
+    @app.route("/users", methods=["GET", "POST"])
+    @require_roles(ROLE_ADMIN)
+    def users():
+        if request.method == "POST":
+            username = (request.form.get("username") or "").strip()
+            full_name = (request.form.get("full_name") or "").strip()[:120] or None
+            password = request.form.get("password") or ""
+            role = (request.form.get("role") or ROLE_VIEWER).strip()
+            if not username or len(username) > 80 or not username.replace("_", "").replace("-", "").isalnum():
+                flash("نام کاربری باید فقط شامل حروف انگلیسی، عدد، خط تیره یا زیرخط باشد.", "danger")
+            elif len(password) < 12:
+                flash("رمز عبور باید حداقل ۱۲ نویسه باشد.", "danger")
+            elif role not in (ROLE_ADMIN, ROLE_HERASAT, ROLE_ANBAR, ROLE_PROJECT, ROLE_VIEWER):
+                flash("نقش انتخاب‌شده معتبر نیست.", "danger")
+            elif User.query.filter_by(username=username).first():
+                flash("این نام کاربری قبلاً ثبت شده است.", "danger")
+            else:
+                user = User(username=username, full_name=full_name, role=role, is_active_user=True)
+                user.set_password(password)
+                db.session.add(user)
+                db.session.flush()
+                log_action("user_created", "User", user.id, f"username={username}; role={role}")
+                db.session.commit()
+                flash("کاربر جدید ساخته شد.", "success")
+                return redirect(url_for("users"))
+        users_list = User.query.order_by(User.username).all()
+        return render_template("users.html", users=users_list,
+                               roles={ROLE_ADMIN: "مدیر سیستم", ROLE_HERASAT: "حراست",
+                                      ROLE_ANBAR: "انبار", ROLE_PROJECT: "پروژه", ROLE_VIEWER: "مشاهده‌گر"})
+
+    @app.route("/users/<int:id>/toggle", methods=["POST"])
+    @require_roles(ROLE_ADMIN)
+    def user_toggle(id):
+        user = db.get_or_404(User, id)
+        if user.id == current_user.id:
+            flash("امکان غیرفعال‌کردن حساب خودتان وجود ندارد.", "danger")
+        else:
+            user.is_active_user = not user.is_active_user
+            log_action("user_enabled" if user.is_active_user else "user_disabled",
+                       "User", user.id, f"username={user.username}")
+            db.session.commit()
+            flash("وضعیت کاربر تغییر کرد.", "success")
+        return redirect(url_for("users"))
+
     @app.route("/inventory")
     @login_required
     def inventory_list():
