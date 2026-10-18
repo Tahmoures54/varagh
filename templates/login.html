@@ -4,78 +4,331 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#10243a">
+  <meta name="color-scheme" content="light">
   <title>ورود | کنترل حمل ورق فراسکو</title>
+
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
   <style>
-    :root{--navy:#10243a;--teal:#087f7b;--muted:#718096;--line:#e2eaf1}
+    :root{
+      --navy:#10243a;
+      --teal:#087f7b;
+      --teal-2:#119c94;
+      --muted:#718096;
+      --line:#e2eaf1;
+      --danger:#b4232d;
+      --success:#167447;
+    }
     *{box-sizing:border-box}
-    body{font-family:Tahoma,"Segoe UI",sans-serif;min-height:100vh;margin:0;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse at 10% 15%,rgba(16,166,160,.22),transparent 34rem),radial-gradient(ellipse at 95% 95%,rgba(56,119,164,.24),transparent 32rem),linear-gradient(135deg,#0d1e31,#173c55 58%,#0c696b);color:#172b42}
-    .login-shell{width:min(100%,940px);display:grid;grid-template-columns:1fr 1fr;background:#fff;border-radius:25px;overflow:hidden;box-shadow:0 28px 90px rgba(0,0,0,.25);min-height:550px}
-    .login-aside{background:linear-gradient(150deg,#10243a,#17485c 68%,#087f7b);color:#fff;padding:48px 40px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
-    .login-aside:after{content:"";position:absolute;width:300px;height:300px;border:1px solid rgba(255,255,255,.1);border-radius:50%;left:-130px;bottom:-110px;box-shadow:0 0 0 28px rgba(255,255,255,.025),0 0 0 60px rgba(255,255,255,.02)}
-    .brand-mark{width:54px;height:54px;display:grid;place-items:center;border-radius:17px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);color:#8ce5dc;font-size:1.65rem;margin-bottom:30px}
+
+    body{
+      font-family:Tahoma,"Segoe UI",sans-serif;
+      min-height:100vh;margin:0;
+      display:flex;align-items:center;justify-content:center;
+      padding:24px;
+      background:
+        radial-gradient(ellipse at 10% 15%,rgba(16,166,160,.22),transparent 34rem),
+        radial-gradient(ellipse at 95% 95%,rgba(56,119,164,.24),transparent 32rem),
+        linear-gradient(135deg,#0d1e31,#173c55 58%,#0c696b);
+      color:#172b42;
+    }
+
+    /* ---------- قالب ---------- */
+    .login-shell{
+      width:min(100%,940px);
+      display:grid;grid-template-columns:1fr 1fr;
+      background:#fff;border-radius:25px;overflow:hidden;
+      box-shadow:0 28px 90px rgba(0,0,0,.25);
+      min-height:550px;
+    }
+
+    /* ---------- ستون کنار ---------- */
+    .login-aside{
+      background:linear-gradient(150deg,#10243a,#17485c 68%,#087f7b);
+      color:#fff;padding:48px 40px;
+      display:flex;flex-direction:column;justify-content:space-between;
+      position:relative;overflow:hidden;
+    }
+    .login-aside::after{
+      content:"";position:absolute;
+      width:300px;height:300px;border:1px solid rgba(255,255,255,.1);
+      border-radius:50%;inset-inline-start:-130px;bottom:-110px;
+      box-shadow:
+        0 0 0 28px rgba(255,255,255,.025),
+        0 0 0 60px rgba(255,255,255,.02);
+      pointer-events:none;
+    }
+    .brand-mark{
+      width:54px;height:54px;display:grid;place-items:center;
+      border-radius:17px;background:rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.16);
+      color:#8ce5dc;font-size:1.65rem;margin-bottom:30px;
+    }
     .aside-title{font-size:1.65rem;font-weight:800;line-height:1.9;margin-bottom:12px}
     .aside-copy{color:#c5d9e4;line-height:2;font-size:.9rem;max-width:340px}
-    .feature-list{display:grid;gap:15px;margin-top:35px;color:#dce9ef;font-size:.84rem}
+    .feature-list{display:grid;gap:15px;margin-top:35px;color:#dce9ef;font-size:.84rem;padding:0;list-style:none}
     .feature-list span{display:flex;align-items:center;gap:10px}
     .feature-list i{color:#8ce5dc;font-size:1.05rem}
     .aside-foot{font-size:.73rem;color:#b4cbd8;position:relative;z-index:1}
-    .login-main{padding:48px 44px;display:flex;flex-direction:column;justify-content:center}
-    .eyebrow{color:var(--teal);font-size:.76rem;font-weight:800;margin-bottom:10px}
+
+    /* ---------- ستون اصلی ---------- */
+    .login-main{
+      padding:48px 44px;
+      display:flex;flex-direction:column;justify-content:center;
+    }
+    .eyebrow{
+      color:var(--teal);font-size:.76rem;font-weight:800;margin-bottom:10px;
+      display:flex;align-items:center;gap:.35rem;
+    }
     .login-title{font-size:1.45rem;font-weight:800;margin-bottom:8px}
-    .login-subtitle{font-size:.86rem;color:var(--muted);line-height:1.9;margin-bottom:30px}
+    .login-subtitle{font-size:.86rem;color:var(--muted);line-height:1.9;margin-bottom:22px}
+
+    /* ---------- فیلدها ---------- */
     .form-label{font-size:.82rem;font-weight:700;margin-bottom:8px}
     .input-wrap{position:relative}
-    .input-wrap i{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#91a3b4}
-    .form-control{height:48px;border:1px solid var(--line);border-radius:12px;padding-right:42px;font-size:.9rem}
-    .form-control:focus{border-color:#67c9c2;box-shadow:0 0 0 .22rem rgba(8,127,123,.12)}
-    .btn-primary{height:48px;border-radius:12px;border:0;background:linear-gradient(100deg,#087f7b,#119c94);font-weight:800;box-shadow:0 7px 18px rgba(8,127,123,.2)}
+    .input-wrap .field-icon{
+      position:absolute;
+      inset-inline-start:14px;top:50%;
+      transform:translateY(-50%);
+      color:#91a3b4;pointer-events:none;
+    }
+    .form-control{
+      height:48px;border:1px solid var(--line);border-radius:12px;
+      padding-inline-start:42px;
+      font-size:.9rem;
+    }
+    .form-control:focus{
+      border-color:#67c9c2;
+      box-shadow:0 0 0 .22rem rgba(8,127,123,.12);
+    }
+    .input-wrap--password .form-control{padding-inline-end:44px}
+
+    /* دکمهٔ نمایش رمز */
+    .pw-toggle{
+      position:absolute;
+      inset-inline-end:8px;top:50%;
+      transform:translateY(-50%);
+      width:32px;height:32px;
+      display:grid;place-items:center;
+      border:0;background:transparent;
+      color:#91a3b4;
+      border-radius:8px;cursor:pointer;
+      padding:0;
+    }
+    .pw-toggle:hover{color:var(--teal)}
+    .pw-toggle:focus-visible{
+      outline:3px solid rgba(8,127,123,.45);
+      outline-offset:2px;
+    }
+
+    /* ---------- دکمهٔ ورود ---------- */
+    .btn-primary{
+      height:48px;border-radius:12px;border:0;
+      background:linear-gradient(100deg,#087f7b,#119c94);
+      font-weight:800;
+      box-shadow:0 7px 18px rgba(8,127,123,.2);
+      display:inline-flex;align-items:center;justify-content:center;gap:.4rem;
+    }
     .btn-primary:hover{background:linear-gradient(100deg,#066b68,#0b827d)}
-    .login-note{margin-top:24px;padding:13px 14px;background:#f4f8fb;border:1px solid #e7eef4;border-radius:12px;font-size:.75rem;color:#6c7f91;line-height:1.9;display:flex;gap:9px}
-    .login-note i{color:#168e8a;font-size:1rem;margin-top:2px}
-    .alert{border:0;border-radius:11px;font-size:.82rem}
-    @media(max-width:720px){.login-shell{grid-template-columns:1fr;max-width:460px;min-height:0}.login-aside{padding:26px 28px}.brand-mark{margin-bottom:14px;width:45px;height:45px}.aside-title{font-size:1.25rem;margin-bottom:4px}.aside-copy{font-size:.8rem}.feature-list{display:none}.aside-foot{margin-top:20px}.login-main{padding:32px 28px}.login-subtitle{margin-bottom:22px}}
+    .btn-primary:focus-visible{
+      outline:3px solid rgba(8,127,123,.45);
+      outline-offset:2px;
+    }
+
+    /* ---------- پیام و یادداشت ---------- */
+    .login-note{
+      margin-top:20px;padding:13px 14px;
+      background:#f4f8fb;border:1px solid #e7eef4;border-radius:12px;
+      font-size:.75rem;color:#6c7f91;line-height:1.9;
+      display:flex;gap:9px;
+    }
+    .login-note i{color:#168e8a;font-size:1rem;margin-top:2px;flex:0 0 auto}
+    .login-note b{color:#4a5f75}
+
+    .alert{
+      border:0;border-radius:11px;font-size:.82rem;
+      display:flex;align-items:center;gap:.5rem;
+    }
+    .alert i{flex:0 0 auto}
+
+    /* ---------- فوکوس قابل مشاهده ---------- */
+    :where(a,button,input,.btn):focus-visible{
+      outline:3px solid rgba(8,127,123,.5);
+      outline-offset:2px;
+    }
+
+    /* ---------- کاهش حرکت ---------- */
+    @media (prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        transition-duration:.001ms!important;
+        animation-duration:.001ms!important;
+      }
+    }
+
+    /* ---------- واکنش‌گرایی ---------- */
+    @media (max-width:720px){
+      .login-shell{grid-template-columns:1fr;max-width:460px;min-height:0}
+      .login-aside{padding:26px 28px}
+      .brand-mark{margin-bottom:14px;width:45px;height:45px;font-size:1.4rem}
+      .aside-title{font-size:1.25rem;margin-bottom:4px}
+      .aside-copy{font-size:.8rem}
+      .feature-list{display:none}
+      .aside-foot{margin-top:20px}
+      .login-main{padding:32px 28px}
+      .login-subtitle{margin-bottom:22px}
+    }
   </style>
 </head>
 <body>
   <div class="login-shell">
-    <aside class="login-aside">
+    <aside class="login-aside" aria-label="درباره سامانه">
       <div>
-        <div class="brand-mark"><i class="bi bi-truck-front-fill"></i></div>
-        <div class="aside-title">کنترل حمل ورق فراسکو</div>
-        <p class="aside-copy">سامانه یکپارچه برای مدیریت حواله‌های حمل، اطلاعات باسکول و کنترل موجودی ورق‌های فولادی.</p>
-        <div class="feature-list">
-          <span><i class="bi bi-check-circle-fill"></i> پیگیری وضعیت هر حواله در یک نگاه</span>
-          <span><i class="bi bi-check-circle-fill"></i> کنترل وزن و مغایرت‌های باسکول</span>
-          <span><i class="bi bi-check-circle-fill"></i> ثبت امن اطلاعات و اسناد حمل</span>
+        <div class="brand-mark" aria-hidden="true">
+          <i class="bi bi-truck-front-fill"></i>
         </div>
+        <h2 class="aside-title">کنترل حمل ورق فراسکو</h2>
+        <p class="aside-copy">
+          سامانه یکپارچه برای مدیریت حواله‌های حمل، اطلاعات باسکول
+          و کنترل موجودی ورق‌های فولادی.
+        </p>
+        <ul class="feature-list">
+          <li>
+            <span><i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+              پیگیری وضعیت هر حواله در یک نگاه</span>
+          </li>
+          <li>
+            <span><i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+              کنترل وزن و مغایرت‌های باسکول</span>
+          </li>
+          <li>
+            <span><i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+              ثبت امن اطلاعات و اسناد حمل</span>
+          </li>
+        </ul>
       </div>
       <div class="aside-foot">سامانه داخلی مدیریت عملیات · ۱۴۰۵</div>
     </aside>
-    <section class="login-main">
-      <div class="eyebrow"><i class="bi bi-shield-lock-fill ms-1"></i> دسترسی امن کاربران</div>
+
+    <main class="login-main">
+      <div class="eyebrow">
+        <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+        <span>دسترسی امن کاربران</span>
+      </div>
       <h1 class="login-title">خوش آمدید</h1>
-      <p class="login-subtitle">برای ورود به سامانه، شماره تلفن ثبت‌شده و رمز عبور خود را وارد کنید.</p>
+      <p class="login-subtitle">
+        برای ورود به سامانه، شماره تلفن ثبت‌شده و رمز عبور خود را وارد کنید.
+      </p>
+
       {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for cat, msg in messages %}
-          <div class="alert alert-{{ cat }} py-2 mb-3" role="alert">{{ msg }}</div>
-        {% endfor %}
+        {% if messages %}
+        <div aria-live="polite" aria-atomic="true">
+          {% for cat, msg in messages %}
+            {% set style = {
+                 'success':'success','error':'danger','danger':'danger',
+                 'warning':'warning','info':'info','message':'info'
+               }.get(cat, 'info') %}
+            {% set icon = {
+                 'success':'bi-check-circle-fill',
+                 'danger':'bi-exclamation-octagon-fill',
+                 'error':'bi-exclamation-octagon-fill',
+                 'warning':'bi-exclamation-triangle-fill',
+                 'info':'bi-info-circle-fill',
+                 'message':'bi-info-circle-fill'
+               }.get(cat, 'bi-info-circle-fill') %}
+            <div class="alert alert-{{ style }} py-2 mb-3" role="alert">
+              <i class="bi {{ icon }}" aria-hidden="true"></i>
+              <div>{{ msg }}</div>
+            </div>
+          {% endfor %}
+        </div>
+        {% endif %}
       {% endwith %}
-      <form method="post" autocomplete="on">
+
+      <form method="post">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
         <div class="mb-3">
           <label class="form-label" for="username">شماره تلفن همراه</label>
-          <div class="input-wrap"><i class="bi bi-phone"></i><input id="username" type="tel" name="username" class="form-control" inputmode="tel" dir="ltr" placeholder="09123456789" pattern="09[0-9]{9}" title="شماره همراه را با ۰۹ و ۱۱ رقم وارد کنید." autocomplete="username" required autofocus></div>
+          <div class="input-wrap">
+            <i class="bi bi-phone field-icon" aria-hidden="true"></i>
+            <input id="username" type="tel" name="username"
+                   class="form-control"
+                   inputmode="tel" dir="ltr"
+                   placeholder="09123456789"
+                   pattern="[0-9۰-۹٠-٩]{11}"
+                   maxlength="11"
+                   autocomplete="username"
+                   autocapitalize="off" spellcheck="false"
+                   required autofocus
+                   aria-describedby="phone-help">
+          </div>
+          <div id="phone-help" class="visually-hidden">
+            شماره همراه ۱۱ رقمی؛ می‌توانید با ارقام فارسی یا انگلیسی وارد کنید.
+          </div>
         </div>
+
         <div class="mb-4">
           <label class="form-label" for="password">رمز عبور</label>
-          <div class="input-wrap"><i class="bi bi-key"></i><input id="password" type="password" name="password" class="form-control" autocomplete="current-password" required></div>
+          <div class="input-wrap input-wrap--password">
+            <i class="bi bi-key field-icon" aria-hidden="true"></i>
+            <input id="password" type="password" name="password"
+                   class="form-control" dir="ltr"
+                   autocomplete="current-password"
+                   required
+                   aria-describedby="password-help">
+            <button type="button"
+                    class="pw-toggle"
+                    id="pw-toggle"
+                    aria-controls="password"
+                    aria-label="نمایش رمز عبور"
+                    aria-pressed="false">
+              <i class="bi bi-eye" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div id="password-help" class="visually-hidden">
+            رمز عبور خود را وارد کنید. با دکمهٔ کنار فیلد می‌توانید رمز را نمایش دهید.
+          </div>
         </div>
-        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-box-arrow-in-left ms-1"></i> ورود به سامانه</button>
+
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-box-arrow-in-left" aria-hidden="true"></i>
+          <span>ورود به سامانه</span>
+        </button>
       </form>
-      <div class="login-note"><i class="bi bi-info-circle-fill"></i><span>شماره همراه مدیر از طریق متغیر امن <b>VARAGH_ADMIN_PHONE</b> تنظیم می‌شود. ورود با شماره همراه، به‌تنهایی تأیید پیامکی محسوب نمی‌شود.</span></div>
-    </section>
+
+      <div class="login-note">
+        <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+        <span>
+          شماره همراه مدیر از طریق متغیر امن <b>VARAGH_ADMIN_PHONE</b> تنظیم می‌شود.
+          ورود با شماره همراه، به‌تنهایی تأیید پیامکی محسوب نمی‌شود.
+        </span>
+      </div>
+    </main>
   </div>
+
+  <script>
+    (function () {
+      "use strict";
+      var btn = document.getElementById("pw-toggle");
+      var input = document.getElementById("password");
+      if (!btn || !input) return;
+
+      btn.addEventListener("click", function () {
+        var showing = input.type === "text";
+        input.type = showing ? "password" : "text";
+        btn.setAttribute("aria-pressed", String(!showing));
+        btn.setAttribute("aria-label", showing ? "نمایش رمز عبور" : "پنهان کردن رمز عبور");
+
+        var icon = btn.querySelector("i");
+        if (icon) {
+          icon.classList.toggle("bi-eye", showing);
+          icon.classList.toggle("bi-eye-slash", !showing);
+        }
+        input.focus();
+      });
+    })();
+  </script>
 </body>
 </html>
