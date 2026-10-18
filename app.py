@@ -12,7 +12,7 @@ from functools import wraps
 from pathlib import Path
 
 from flask import (
-    Flask, abort, flash, make_response, redirect, render_template, request,
+    Blueprint, Flask, abort, flash, make_response, redirect, render_template, request,
     send_from_directory, session, url_for,
 )
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
@@ -54,6 +54,15 @@ BALE_KHEYR = ["خیر", "بله"]
 
 def create_app(test_config=None):
     app = Flask(__name__)
+
+    # Route groups are isolated into Flask blueprints. Keep the factory as the
+    # deployment entry point so Vercel/Gunicorn imports remain compatible.
+    auth_bp = Blueprint("auth", __name__)
+    dashboard_bp = Blueprint("dashboard", __name__)
+    havaleh_bp = Blueprint("havaleh", __name__)
+    users_bp = Blueprint("users", __name__)
+    inventory_bp = Blueprint("inventory", __name__)
+    reports_bp = Blueprint("reports", __name__)
     app.config.update(
         SECRET_KEY=os.environ.get("VARAGH_SECRET_KEY") or secrets.token_hex(32),
         SQLALCHEMY_DATABASE_URI=_normalize_database_url(os.environ.get(
@@ -79,7 +88,7 @@ def create_app(test_config=None):
     db.init_app(app)
 
     login_manager = LoginManager()
-    login_manager.login_view = "login"
+    login_manager.login_view = "auth.login"
     login_manager.login_message = "برای ادامه ابتدا وارد سامانه شوید."
     login_manager.login_message_category = "warning"
     login_manager.init_app(app)
@@ -279,10 +288,10 @@ def create_app(test_config=None):
         item.updated_by_id = current_user.id
         return old_status
 
-    @app.route("/login", methods=["GET", "POST"])
+    @auth_bp.route("/login", methods=["GET", "POST"])
     def login():
         if current_user.is_authenticated:
-            return redirect(url_for("index"))
+            return redirect(url_for("dashboard.index))
         if request.method == "POST":
             username = (request.form.get("username") or "").strip()
             password = request.form.get("password") or ""
@@ -292,19 +301,19 @@ def create_app(test_config=None):
                 login_user(user, remember=False, fresh=True)
                 session["_csrf_token"] = secrets.token_urlsafe(32)
                 flash("با موفقیت وارد شدید.", "success")
-                return redirect(request.args.get("next") if (request.args.get("next", "").startswith("/") and not request.args.get("next", "").startswith("//")) else url_for("index"))
+                return redirect(request.args.get("next") if (request.args.get("next", "").startswith("/") and not request.args.get("next", "").startswith("//")) else url_for("dashboard.index))
             flash("نام کاربری یا رمز عبور صحیح نیست.", "danger")
         return render_template("login.html")
 
-    @app.route("/logout", methods=["POST"])
+    @auth_bp.route("/logout", methods=["POST"])
     @login_required
     def logout():
         logout_user()
         session.clear()
         flash("از سامانه خارج شدید.", "info")
-        return redirect(url_for("login"))
+        return redirect(url_for("auth.login))
 
-    @app.route("/")
+    @dashboard_bp.route("/")
     @login_required
     def index():
         all_items = Havaleh.query.order_by(Havaleh.created_at.desc()).all()
@@ -329,7 +338,7 @@ def create_app(test_config=None):
         followups = [h for h in all_items if h.vaziyat_havaleh in ("ناقص", "نیازمند بررسی") or h.vaziyat_moghayerat != "بدون مغایرت" or not h.ghabz_por_file or not h.ghabz_khali_file]
         return render_template("index.html", stats=stats, followups=followups[:100])
 
-    @app.route("/havaleh")
+    @havaleh_bp.route("/havaleh")
     @login_required
     def havaleh_list():
         q = (request.args.get("q") or "").strip()[:100]
@@ -347,7 +356,7 @@ def create_app(test_config=None):
         items = query.order_by(Havaleh.created_at.desc()).limit(1000).all()
         return render_template("havaleh_list.html", items=items, q=q, status=status, statuses=STATUSES)
 
-    @app.route("/havaleh/new", methods=["GET", "POST"])
+    @havaleh_bp.route("/havaleh/new", methods=["GET", "POST"])
     @require_roles(ROLE_ADMIN, ROLE_HERASAT, ROLE_ANBAR, ROLE_PROJECT)
     def havaleh_new():
         item = Havaleh()
@@ -364,7 +373,7 @@ def create_app(test_config=None):
                 log_action("create", "Havaleh", item.id, f"شماره حواله={item.shomare_havaleh}")
                 db.session.commit()
                 flash(f"حواله {item.shomare_havaleh} ثبت شد.", "success")
-                return redirect(url_for("havaleh_list"))
+                return redirect(url_for("havaleh.havaleh_list))
             except (ValueError, IntegrityError) as exc:
                 db.session.rollback()
                 flash(str(exc) if isinstance(exc, ValueError) else "شماره حواله تکراری است؛ دوباره تلاش کنید.", "danger")
@@ -414,7 +423,7 @@ def create_app(test_config=None):
             if not form_value_matches(field, fields[field]):
                 raise ValueError("نقش کاربری شما اجازه تغییر یکی از فیلدهای ارسال‌شده را ندارد.")
 
-    @app.route("/havaleh/<int:id>/edit", methods=["GET", "POST"])
+    @havaleh_bp.route("/havaleh/<int:id>/edit", methods=["GET", "POST"])
     @require_roles(ROLE_ADMIN, ROLE_HERASAT, ROLE_ANBAR, ROLE_PROJECT)
     def havaleh_edit(id):
         item = db.get_or_404(Havaleh, id)
@@ -426,7 +435,7 @@ def create_app(test_config=None):
                 log_action("update", "Havaleh", item.id, f"وضعیت: {old_status} ← {item.vaziyat_havaleh}")
                 db.session.commit()
                 flash("تغییرات حواله ذخیره شد.", "success")
-                return redirect(url_for("havaleh_list"))
+                return redirect(url_for("havaleh.havaleh_list))
             except (ValueError, IntegrityError) as exc:
                 db.session.rollback()
                 flash(str(exc) if isinstance(exc, ValueError) else "ذخیره تغییرات ناموفق بود.", "danger")
@@ -434,20 +443,20 @@ def create_app(test_config=None):
         return render_template("havaleh_form.html", item=item, inventory=inventory, statuses=STATUSES,
                                moghayerat_list=MOGHAYERAT, bale_kheyr=BALE_KHEYR)
 
-    @app.route("/havaleh/<int:id>/delete", methods=["POST"])
+    @havaleh_bp.route("/havaleh/<int:id>/delete", methods=["POST"])
     @require_roles(ROLE_ADMIN)
     def havaleh_delete(id):
         item = db.get_or_404(Havaleh, id)
         if item.inventory_deducted:
             flash("حواله‌ای که روی موجودی اثر گذاشته حذف نمی‌شود؛ برای اصلاح، با مدیر سامانه هماهنگ کنید.", "danger")
-            return redirect(url_for("havaleh_list"))
+            return redirect(url_for("havaleh.havaleh_list))
         log_action("delete", "Havaleh", item.id, f"شماره حواله={item.shomare_havaleh}")
         db.session.delete(item)
         db.session.commit()
         flash("حواله حذف شد.", "success")
-        return redirect(url_for("havaleh_list"))
+        return redirect(url_for("havaleh.havaleh_list))
 
-    @app.route("/users", methods=["GET", "POST"])
+    @users_bp.route("/users", methods=["GET", "POST"])
     @require_roles(ROLE_ADMIN)
     def users():
         if request.method == "POST":
@@ -471,13 +480,13 @@ def create_app(test_config=None):
                 log_action("user_created", "User", user.id, f"username={username}; role={role}")
                 db.session.commit()
                 flash("کاربر جدید ساخته شد.", "success")
-                return redirect(url_for("users"))
+                return redirect(url_for("users.users))
         users_list = User.query.order_by(User.username).all()
         return render_template("users.html", users=users_list,
                                roles={ROLE_ADMIN: "مدیر سیستم", ROLE_HERASAT: "حراست",
                                       ROLE_ANBAR: "انبار", ROLE_PROJECT: "پروژه", ROLE_VIEWER: "مشاهده‌گر"})
 
-    @app.route("/users/<int:id>/toggle", methods=["POST"])
+    @users_bp.route("/users/<int:id>/toggle", methods=["POST"])
     @require_roles(ROLE_ADMIN)
     def user_toggle(id):
         user = db.get_or_404(User, id)
@@ -489,9 +498,9 @@ def create_app(test_config=None):
                        "User", user.id, f"username={user.username}")
             db.session.commit()
             flash("وضعیت کاربر تغییر کرد.", "success")
-        return redirect(url_for("users"))
+        return redirect(url_for("users.users))
 
-    @app.route("/inventory/template.csv")
+    @inventory_bp.route("/inventory/template.csv")
     @require_roles(ROLE_ADMIN)
     def inventory_template():
         output = io.StringIO()
@@ -504,18 +513,18 @@ def create_app(test_config=None):
         response.headers["Content-Disposition"] = "attachment; filename=varagh-inventory-template.csv"
         return response
 
-    @app.route("/inventory/import", methods=["POST"])
+    @inventory_bp.route("/inventory/import", methods=["POST"])
     @require_roles(ROLE_ADMIN)
     def inventory_import():
         upload = request.files.get("inventory_file")
         if not upload or not upload.filename:
             flash("فایل CSV یا XLSX موجودی را انتخاب کنید.", "danger")
-            return redirect(url_for("inventory_list"))
+            return redirect(url_for("inventory.inventory_list))
         filename = secure_filename(upload.filename)
         extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
         if extension not in ("csv", "xlsx"):
             flash("فقط فایل CSV یا XLSX پذیرفته می‌شود.", "danger")
-            return redirect(url_for("inventory_list"))
+            return redirect(url_for("inventory.inventory_list))
         try:
             if extension == "csv":
                 rows = list(csv.DictReader(io.StringIO(upload.read().decode("utf-8-sig"))))
@@ -607,9 +616,9 @@ def create_app(test_config=None):
             db.session.rollback()
             app.logger.exception("Inventory import failed")
             flash("ورود فایل ناموفق بود؛ ساختار فایل را بررسی کنید.", "danger")
-        return redirect(url_for("inventory_list"))
+        return redirect(url_for("inventory.inventory_list))
 
-    @app.route("/inventory")
+    @inventory_bp.route("/inventory")
     @login_required
     def inventory_list():
         items = Inventory.query.order_by(Inventory.code_kala, Inventory.id).all()
@@ -617,7 +626,7 @@ def create_app(test_config=None):
         unique_count = len({i.code_kala for i in items})
         return render_template("inventory.html", items=items, total_kg=total_kg, unique_count=unique_count)
 
-    @app.route("/export/excel")
+    @reports_bp.route("/export/excel")
     @login_required
     def export_excel():
         try:
@@ -647,7 +656,7 @@ def create_app(test_config=None):
         response.headers["Content-Disposition"] = "attachment; filename=varagh-havaleh.xlsx"
         return response
 
-    @app.route("/receipts/<path:filename>")
+    @reports_bp.route("/receipts/<path:filename>")
     @login_required
     def receipt_download(filename):
         if filename != secure_filename(filename) or "/" in filename or "\\" in filename:
@@ -669,6 +678,13 @@ def create_app(test_config=None):
     @app.errorhandler(400)
     def bad_request(error):
         return render_template("error.html", code=400, message=getattr(error, "description", "درخواست معتبر نیست.")), 400
+
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(dashboard_bp)
+    app.register_blueprint(havaleh_bp)
+    app.register_blueprint(users_bp)
+    app.register_blueprint(inventory_bp)
+    app.register_blueprint(reports_bp)
 
     with app.app_context():
         db.create_all()

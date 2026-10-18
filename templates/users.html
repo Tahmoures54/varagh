@@ -44,7 +44,7 @@
               <td>{% if user.is_active_user %}<span class="badge bg-success">فعال</span>{% else %}<span class="badge bg-secondary">غیرفعال</span>{% endif %}</td>
               <td>
                 {% if user.id != current_user.id %}
-                <form method="post" action="{{ url_for('user_toggle', id=user.id) }}">
+                <form method="post" action="{{ url_for("users.user_toggle, id=user.id) }}">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                   <button class="btn btn-sm btn-outline-{% if user.is_active_user %}danger{% else %}success{% endif %}" type="submit">
                     {% if user.is_active_user %}غیرفعال‌کردن{% else %}فعال‌کردن{% endif %}

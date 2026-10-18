@@ -11,9 +11,9 @@
       <strong>ورود موجودی از فایل</strong>
       <div class="small text-muted">فایل CSV یا XLSX؛ حداکثر ۸ مگابایت و ۵۰۰۰ ردیف در هر بار.</div>
     </div>
-    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('inventory_template') }}">دریافت الگوی CSV</a>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for("inventory.inventory_template) }}">دریافت الگوی CSV</a>
   </div>
-  <form method="post" action="{{ url_for('inventory_import') }}" enctype="multipart/form-data" class="row g-2 align-items-center">
+  <form method="post" action="{{ url_for("inventory.inventory_import) }}" enctype="multipart/form-data" class="row g-2 align-items-center">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
     <div class="col-md-8"><input class="form-control" type="file" name="inventory_file" accept=".csv,.xlsx" required></div>
     <div class="col-md-4"><button class="btn btn-primary w-100" type="submit">ورود / به‌روزرسانی موجودی</button></div>
