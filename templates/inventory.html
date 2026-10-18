@@ -4,6 +4,24 @@
 {% block content %}
 <h4 class="mb-3"><i class="bi bi-box-seam"></i> ایندکس موجودی ورق‌های فولادی</h4>
 
+{% if current_user.role == 'admin' %}
+<div class="card p-3 mb-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+    <div>
+      <strong>ورود موجودی از فایل</strong>
+      <div class="small text-muted">فایل CSV یا XLSX؛ حداکثر ۸ مگابایت و ۵۰۰۰ ردیف در هر بار.</div>
+    </div>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('inventory_template') }}">دریافت الگوی CSV</a>
+  </div>
+  <form method="post" action="{{ url_for('inventory_import') }}" enctype="multipart/form-data" class="row g-2 align-items-center">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+    <div class="col-md-8"><input class="form-control" type="file" name="inventory_file" accept=".csv,.xlsx" required></div>
+    <div class="col-md-4"><button class="btn btn-primary w-100" type="submit">ورود / به‌روزرسانی موجودی</button></div>
+  </form>
+  <small class="text-muted mt-2">ستون‌های code_kala و mojudi_vaghei اجباری هستند. ردیف‌ها بر اساس کد کالا + مشخصات + موقعیت تطبیق داده می‌شوند؛ پیش از ورود، از فایل و پایگاه داده نسخه پشتیبان بگیرید.</small>
+</div>
+{% endif %}
+
 <div class="row g-3 mb-4">
   <div class="col-md-4">
     <div class="card p-3 text-center">
