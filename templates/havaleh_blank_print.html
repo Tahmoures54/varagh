@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}فرم خام حواله حمل ورق{% endblock %}
+{% block content %}
+<style>
+  .blank-voucher { max-width: 1100px; margin: 0 auto; background:#fff; border:1px solid #d7dee7; padding:22px; color:#111; font-size:12px; }
+  .blank-voucher h1,.blank-voucher h2,.blank-voucher h3 { color:#111; font-weight:800; }
+  .blank-voucher h1 { font-size:20px; margin:0 0 5px; }
+  .blank-voucher h2 { font-size:16px; margin:0 0 4px; }
+  .blank-voucher h3 { font-size:13px; margin:0; }
+  .blank-voucher .field { border-bottom:1px dotted #555; min-height:27px; padding:5px 3px; }
+  .blank-voucher .field-label { font-weight:700; }
+  .blank-voucher .section { background:#edf2f7; border:1px solid #b9c4d0; padding:7px 9px; margin:12px 0 7px; font-weight:800; }
+  .blank-voucher table { width:100%; border-collapse:collapse; }
+  .blank-voucher th,.blank-voucher td { border:1px solid #555; padding:7px 4px; height:38px; vertical-align:middle; }
+  .blank-voucher th { background:#edf2f7; text-align:center; }
+  .blank-voucher .sign { min-height:80px; border:1px solid #777; padding:8px; }
+  .print-tools { max-width:1100px; margin:0 auto 12px; display:flex; gap:8px; flex-wrap:wrap; }
+  @page { size:A4 landscape; margin:9mm; }
+  @media print {
+    body { background:#fff !important; font-size:10px !important; }
+    nav,.app-navbar,footer,.print-tools,.flash-container { display:none !important; }
+    main.container { max-width:none !important; width:100% !important; padding:0 !important; margin:0 !important; }
+    .blank-voucher { max-width:none; border:1px solid #222; padding:10px; box-shadow:none; font-size:10px; }
+    .blank-voucher .section { margin:7px 0 4px; padding:4px 6px; }
+    .blank-voucher th,.blank-voucher td { height:30px; padding:4px 3px; }
+    .blank-voucher .field { min-height:22px; }
+    .blank-voucher .sign { min-height:58px; }
+    * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+</style>
+<div class="print-tools">
+  <a class="btn btn-outline-primary" href="{{ url_for('havaleh.havaleh_list') }}"><i class="bi bi-arrow-right ms-1"></i> بازگشت به حواله‌ها</a>
+  <button class="btn btn-primary" type="button" onclick="window.print()"><i class="bi bi-printer ms-1"></i> چاپ فرم خام</button>
+</div>
+<section class="blank-voucher" aria-label="فرم خام حواله حمل ورق فولادی">
+  <div class="text-center mb-2">
+    <h2>بسمه تعالی</h2>
+    <h1>شرکت فراسکو</h1>
+    <h2>حواله حمل ورق فولادی</h2>
+    <div>فرم خام جهت تکمیل دستی در محل بارگیری و کنترل خروج</div>
+  </div>
+  <div class="row g-2">
+    <div class="col-3"><div class="field"><span class="field-label">شماره حواله:</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">تاریخ صدور:</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">ساعت صدور:</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">شماره مجوز/درخواست:</span></div></div>
+  </div>
+  <div class="section">الف ـ اطلاعات حمل و مقصد</div>
+  <div class="row g-2">
+    <div class="col-4"><div class="field"><span class="field-label">واحد درخواست‌کننده:</span></div></div>
+    <div class="col-4"><div class="field"><span class="field-label">پروژه/قرارداد:</span></div></div>
+    <div class="col-4"><div class="field"><span class="field-label">شماره قرارداد حمل:</span></div></div>
+    <div class="col-4"><div class="field"><span class="field-label">مبدأ بارگیری:</span></div></div>
+    <div class="col-4"><div class="field"><span class="field-label">مقصد/محل تخلیه:</span></div></div>
+    <div class="col-4"><div class="field"><span class="field-label">نام تحویل‌گیرنده:</span></div></div>
+    <div class="col-4"><div class="field"><span class="field-label">شرکت حمل:</span></div></div>
+    <div class="col-4"><div class="field"><span class="field-label">شماره تماس تحویل‌گیرنده:</span></div></div>
+    <div class="col-4"><div class="field"><span class="field-label">شرح/علت حمل:</span></div></div>
+  </div>
+  <div class="section">ب ـ مشخصات وسیله حمل و راننده</div>
+  <div class="row g-2">
+    <div class="col-3"><div class="field"><span class="field-label">نوع وسیله:</span> ☐ کامیون ☐ تریلی ☐ خاور ☐ نیسان ☐ سایر</div></div>
+    <div class="col-3"><div class="field"><span class="field-label">نوع بارگیر:</span> ☐ کفی ☐ لبه‌دار ☐ سایر</div></div>
+    <div class="col-3"><div class="field"><span class="field-label">پلاک کشنده:</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">پلاک تریلر:</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">نام و نام خانوادگی راننده:</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">شماره تماس راننده:</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">شماره گواهینامه (در صورت نیاز):</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">شماره بارنامه:</span></div></div>
+  </div>
+  <div class="section">ج ـ مشخصات کالا و ورق فولادی</div>
+  <table>
+    <thead><tr>
+      <th style="width:4%">ردیف</th><th style="width:13%">ایندکس کالا</th><th style="width:11%">کد کالا</th>
+      <th style="width:17%">شرح کالا/نوع ورق</th><th style="width:9%">ضخامت</th><th style="width:9%">عرض</th>
+      <th style="width:9%">طول</th><th style="width:9%">تعداد/بندیل</th><th style="width:11%">وزن خالص (کیلوگرم)</th><th style="width:8%">شماره ذوب/بچ</th>
+    </tr></thead>
+    <tbody>{% for n in range(1, 5) %}<tr><td class="text-center">{{ n }}</td>{% for i in range(9) %}<td></td>{% endfor %}</tr>{% endfor %}</tbody>
+  </table>
+  <div class="row g-2 mt-1">
+    <div class="col-4"><div class="field"><span class="field-label">جمع تعداد/بسته‌ها:</span></div></div>
+    <div class="col-4"><div class="field"><span class="field-label">جمع وزن خالص (کیلوگرم):</span></div></div>
+    <div class="col-4"><div class="field"><span class="field-label">شماره رسید/سند انبار:</span></div></div>
+  </div>
+  <div class="section">د ـ اطلاعات باسکول (در صورت استفاده)</div>
+  <div class="row g-2">
+    <div class="col-3"><div class="field"><span class="field-label">وزن پُر (کیلوگرم):</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">وزن خالی (کیلوگرم):</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">وزن خالص محاسبه‌شده:</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">شماره قبض باسکول:</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">تاریخ و ساعت توزین:</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">نام اپراتور باسکول:</span></div></div>
+    <div class="col-6"><div class="field"><span class="field-label">ملاحظات/مغایرت:</span></div></div>
+  </div>
+  <div class="section">هـ ـ کنترل بارگیری و ایمنی</div>
+  <div class="row g-2">
+    <div class="col-4">☐ تطبیق کالا و ایندکس موجودی</div><div class="col-4">☐ کنترل تعداد و وزن</div><div class="col-4">☐ کنترل وسیله و پلاک‌ها</div>
+    <div class="col-4">☐ کنترل مهار و تثبیت بار</div><div class="col-4">☐ کنترل ظرفیت مجاز حمل</div><div class="col-4">☐ کنترل مجوز خروج</div>
+  </div>
+  <div class="section">و ـ تأییدها و تحویل</div>
+  <div class="row g-2">
+    <div class="col-3"><div class="sign"><strong>تنظیم‌کننده حواله</strong><br>نام و امضا:</div></div>
+    <div class="col-3"><div class="sign"><strong>مسئول انبار/تحویل‌دهنده</strong><br>نام و امضا:</div></div>
+    <div class="col-3"><div class="sign"><strong>مسئول بارگیری</strong><br>نام و امضا:</div></div>
+    <div class="col-3"><div class="sign"><strong>حراست/کنترل خروج</strong><br>نام و امضا:</div></div>
+    <div class="col-3"><div class="sign"><strong>راننده</strong><br>نام و امضا:</div></div>
+    <div class="col-3"><div class="sign"><strong>تاریخ و ساعت خروج</strong><br>تاریخ: ................ ساعت: ............</div></div>
+    <div class="col-3"><div class="sign"><strong>ملاحظات نهایی</strong><br></div></div>
+    <div class="col-3"><div class="sign"><strong>پیوست‌ها</strong><br>☐ قبض باسکول ☐ بارنامه ☐ سایر</div></div>
+  </div>
+  <div class="section">ز ـ ثبت سیستمی (تکمیل در دفتر)</div>
+  <div class="row g-2">
+    <div class="col-3"><div class="field"><span class="field-label">شماره ثبت سیستمی:</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">تاریخ/ساعت ورود اطلاعات:</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">نام ثبت‌کننده:</span></div></div>
+    <div class="col-3"><div class="field"><span class="field-label">وضعیت:</span> ☐ ثبت اولیه ☐ تأییدشده ☐ مغایرت</div></div>
+  </div>
+  <div class="text-center mt-2 small">ثبت اطلاعات این فرم باید با فهرست رسمی موجودی و رویه‌های مصوب شرکت فراسکو تطبیق داده شود.</div>
+</section>
+{% endblock %}
