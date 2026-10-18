@@ -7,7 +7,7 @@
     <span class="heading-icon"><i class="bi bi-{% if item %}pencil-square{% else %}plus-circle-fill{% endif %}"></i></span>
     <div>
       <h4>{% if item %}ویرایش حواله {{ item.shomare_havaleh }}{% else %}ثبت حواله جدید{% endif %}</h4>
-      <p>اطلاعات را با دقت ثبت کنید؛ فیلدهای وزن و اسناد در کنترل نهایی استفاده می‌شوند.</p>
+      <p>تاریخ‌ها را به تقویم شمسی و به شکل سال/ماه/روز وارد کنید؛ نمونه: ۱۴۰۵/۰۷/۲۶. فیلدهای وزن و اسناد در کنترل نهایی استفاده می‌شوند.</p>
     </div>
   </div>
   <a href="{{ url_for("havaleh.havaleh_list") }}" class="btn btn-outline-primary"><i class="bi bi-arrow-right ms-1"></i> بازگشت به حواله‌ها</a>
@@ -24,8 +24,8 @@
     </div>
     <div class="col-md-3">
       <label class="form-label">تاریخ حواله</label>
-      <input type="date" name="tarikh_havaleh" class="form-control"
-             value="{{ item.tarikh_havaleh.isoformat() if item and item.tarikh_havaleh else '' }}">
+      <input type="text" name="tarikh_havaleh" class="form-control"
+             value="{{ item.tarikh_havaleh|fa_date if item and item.tarikh_havaleh else '' }}" placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric" pattern="[0-9۰-۹٠-٩]{4}[/-][0-9۰-۹٠-٩]{1,2}[/-][0-9۰-۹٠-٩]{1,2}">
     </div>
     <div class="col-md-3">
       <label class="form-label">نوع وسیله نقلیه</label>
@@ -97,7 +97,7 @@
   <div class="row g-3 mb-4">
     <div class="col-md-3">
       <label class="form-label">تاریخ ورود</label>
-      <input type="date" name="tarikh_vorud" class="form-control" value="{{ item.tarikh_vorud.isoformat() if item and item.tarikh_vorud else '' }}">
+      <input type="text" name="tarikh_vorud" class="form-control" value="{{ item.tarikh_vorud|fa_date if item and item.tarikh_vorud else '' }}" placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric">
     </div>
     <div class="col-md-2">
       <label class="form-label">ساعت ورود</label>
@@ -105,7 +105,7 @@
     </div>
     <div class="col-md-3">
       <label class="form-label">تاریخ خروج</label>
-      <input type="date" name="tarikh_khoruj" class="form-control" value="{{ item.tarikh_khoruj.isoformat() if item and item.tarikh_khoruj else '' }}">
+      <input type="text" name="tarikh_khoruj" class="form-control" value="{{ item.tarikh_khoruj|fa_date if item and item.tarikh_khoruj else '' }}" placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric">
     </div>
     <div class="col-md-2">
       <label class="form-label">ساعت خروج</label>
@@ -187,7 +187,7 @@
     </div>
     <div class="col-md-3">
       <label class="form-label">تاریخ پیگیری</label>
-      <input type="date" name="tarikh_peygiri" class="form-control" value="{{ item.tarikh_peygiri.isoformat() if item and item.tarikh_peygiri else '' }}">
+      <input type="text" name="tarikh_peygiri" class="form-control" value="{{ item.tarikh_peygiri|fa_date if item and item.tarikh_peygiri else '' }}" placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric">
     </div>
     <div class="col-md-6">
       <label class="form-label">نتیجه پیگیری</label>
@@ -199,7 +199,7 @@
     </div>
     <div class="col-md-3">
       <label class="form-label">تاریخ تأیید نهایی</label>
-      <input type="date" name="tarikh_taeed" class="form-control" value="{{ item.tarikh_taeed.isoformat() if item and item.tarikh_taeed else '' }}">
+      <input type="text" name="tarikh_taeed" class="form-control" value="{{ item.tarikh_taeed|fa_date if item and item.tarikh_taeed else '' }}" placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric">
     </div>
     <div class="col-md-6">
       <label class="form-label">توضیحات</label>
