@@ -148,6 +148,7 @@
           <li class="nav-item"><a class="nav-link" href="{{ url_for("havaleh.havaleh_list") }}"><i class="bi bi-receipt-cutoff"></i> حواله‌ها</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for("havaleh.havaleh_new") }}"><i class="bi bi-plus-circle-fill"></i> ثبت حواله</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for("inventory.inventory_list") }}"><i class="bi bi-box-seam-fill"></i> موجودی</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for("reports.reconciliation") }}"><i class="bi bi-clipboard2-data-fill"></i> جمع‌بندی انتقال</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for("reports.export_excel") }}"><i class="bi bi-file-earmark-spreadsheet-fill"></i> خروجی اکسل</a></li>
           {% if current_user.is_authenticated and current_user.role == 'admin' %}
           <li class="nav-item"><a class="nav-link" href="{{ url_for("users.users") }}"><i class="bi bi-people-fill"></i> کاربران</a></li>
