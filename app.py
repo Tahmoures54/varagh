@@ -254,8 +254,8 @@ def create_app(test_config=None):
             password = request.form.get("password") or ""
             user = User.query.filter_by(username=username).first()
             if user and user.is_active_user and user.check_password(password):
-                login_user(user, remember=False, fresh=True)
                 session.clear()
+                login_user(user, remember=False, fresh=True)
                 session["_csrf_token"] = secrets.token_urlsafe(32)
                 flash("با موفقیت وارد شدید.", "success")
                 return redirect(request.args.get("next") if (request.args.get("next", "").startswith("/") and not request.args.get("next", "").startswith("//")) else url_for("index"))
@@ -324,9 +324,9 @@ def create_app(test_config=None):
                 if Havaleh.query.filter_by(shomare_havaleh=item.shomare_havaleh).first():
                     raise ValueError("این شماره حواله قبلاً ثبت شده است.")
                 item.created_by_id = current_user.id
-                apply_form(item, creating=True)
                 db.session.add(item)
                 db.session.flush()
+                apply_form(item, creating=True)
                 log_action("create", "Havaleh", item.id, f"شماره حواله={item.shomare_havaleh}")
                 db.session.commit()
                 flash(f"حواله {item.shomare_havaleh} ثبت شد.", "success")
