@@ -18,9 +18,11 @@
   <div class="section-title"><i class="bi bi-truck"></i> الف) اطلاعات حواله و وسیله نقلیه</div>
   <div class="row g-3 mb-4">
     <div class="col-md-3">
-      <label class="form-label">شماره حواله (در صورت خالی بودن، خودکار ساخته می‌شود)</label>
-      <input type="text" name="shomare_havaleh" class="form-control"
-             value="{{ item.shomare_havaleh if item else '' }}" {% if item %}readonly{% endif %}>
+      <label class="form-label">شماره حواله</label>
+      <input type="text" class="form-control" dir="ltr"
+             value="{{ item.shomare_havaleh if item else '' }}"
+             placeholder="پس از ثبت، شماره به‌صورت خودکار صادر می‌شود" readonly aria-readonly="true">
+      {% if not item %}<div class="form-text">شماره یکتا هنگام ثبت حواله به‌صورت خودکار تولید می‌شود و نیازی به ورود دستی نیست.</div>{% endif %}
     </div>
     <div class="col-md-3">
       <label class="form-label">تاریخ حواله</label>
