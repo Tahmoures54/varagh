@@ -386,7 +386,7 @@ def create_app(test_config=None):
             like = f"%{q}%"
             query = query.filter(or_(
                 Havaleh.shomare_havaleh.ilike(like), Havaleh.pelak.ilike(like),
-                Havaleh.name_ranande.ilike(like), Havaleh.sharh_kala.ilike(like),
+                Havaleh.name_ranande.ilike(like), Havaleh.noe_vasileh.ilike(like), Havaleh.pelak_trailer.ilike(like), Havaleh.sharh_kala.ilike(like),
                 Havaleh.code_kala.ilike(like), Havaleh.moshakhasat_varagh.ilike(like),
             ))
         if status in STATUSES:
@@ -675,13 +675,13 @@ def create_app(test_config=None):
         wb = Workbook()
         ws = wb.active
         ws.title = "حواله‌ها"
-        headers = ["شماره حواله", "تاریخ حواله", "پلاک", "نام راننده", "شرح کالا", "مشخصات ورق", "کد کالا", "تعداد بسته", "وزن اسنادی", "وزن پر", "وزن خالی", "وزن خالص", "اختلاف وزن", "تاریخ ورود", "ساعت ورود", "تاریخ خروج", "ساعت خروج", "وضعیت", "مغایرت", "قبض پر", "قبض خالی", "توضیحات"]
+        headers = ["شماره حواله", "تاریخ حواله", "نوع وسیله", "پلاک کشنده", "پلاک تریلر", "نام راننده", "شماره تماس راننده", "شرح کالا", "مشخصات ورق", "کد کالا", "تعداد بسته", "وزن اسنادی", "وزن پر", "وزن خالی", "وزن خالص", "اختلاف وزن", "تاریخ ورود", "ساعت ورود", "تاریخ خروج", "ساعت خروج", "وضعیت", "مغایرت", "قبض پر", "قبض خالی", "توضیحات"]
         ws.append(headers)
         for cell in ws[1]:
             cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = PatternFill("solid", fgColor="1F4E79")
         for h in Havaleh.query.order_by(Havaleh.created_at.desc()).all():
-            ws.append([h.shomare_havaleh, h.tarikh_havaleh.isoformat() if h.tarikh_havaleh else "", h.pelak, h.name_ranande, h.sharh_kala, h.moshakhasat_varagh, h.code_kala, h.tedad_baste, h.vazn_esnadi, h.vazn_por, h.vazn_khali, h.vazn_khales, h.ekhtelaf_vazn, h.tarikh_vorud.isoformat() if h.tarikh_vorud else "", h.saat_vorud.strftime("%H:%M") if h.saat_vorud else "", h.tarikh_khoruj.isoformat() if h.tarikh_khoruj else "", h.saat_khoruj.strftime("%H:%M") if h.saat_khoruj else "", h.vaziyat_havaleh, h.vaziyat_moghayerat, h.ghabz_por_piost, h.ghabz_khali_piost, h.tozihat])
+            ws.append([h.shomare_havaleh, h.tarikh_havaleh.isoformat() if h.tarikh_havaleh else "", h.noe_vasileh, h.pelak, h.pelak_trailer, h.name_ranande, h.mobile_ranande, h.sharh_kala, h.moshakhasat_varagh, h.code_kala, h.tedad_baste, h.vazn_esnadi, h.vazn_por, h.vazn_khali, h.vazn_khales, h.ekhtelaf_vazn, h.tarikh_vorud.isoformat() if h.tarikh_vorud else "", h.saat_vorud.strftime("%H:%M") if h.saat_vorud else "", h.tarikh_khoruj.isoformat() if h.tarikh_khoruj else "", h.saat_khoruj.strftime("%H:%M") if h.saat_khoruj else "", h.vaziyat_havaleh, h.vaziyat_moghayerat, h.ghabz_por_piost, h.ghabz_khali_piost, h.tozihat])
         ws.freeze_panes = "A2"
         ws.auto_filter.ref = ws.dimensions
         for col in ws.columns:
