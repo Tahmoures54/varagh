@@ -215,6 +215,8 @@ def create_app(test_config=None):
         status = (request.form.get("vaziyat_havaleh") or "ثبت‌شده").strip()
         if status not in STATUSES:
             raise ValueError("وضعیت حواله معتبر نیست.")
+        if status == "تکمیل‌شده" and current_user.role not in (ROLE_ADMIN, ROLE_PROJECT):
+            raise ValueError("تکمیل نهایی حواله فقط برای مدیر یا نقش پروژه مجاز است.")
         item.vaziyat_havaleh = status
         discrepancy = (request.form.get("vaziyat_moghayerat") or "بدون مغایرت").strip()
         if discrepancy not in MOGHAYERAT:
@@ -338,6 +340,48 @@ def create_app(test_config=None):
         return render_template("havaleh_form.html", item=None, inventory=inventory, statuses=STATUSES,
                                moghayerat_list=MOGHAYERAT, bale_kheyr=BALE_KHEYR)
 
+    def form_value_matches(field, current):
+        raw = (request.form.get(field) or "").strip()
+        if current is None:
+            return raw == ""
+        if isinstance(current, datetime):
+            current = current.date()
+        if isinstance(current, date):
+            return raw == current.isoformat()
+        if isinstance(current, time):
+            return raw == current.strftime("%H:%M")
+        if isinstance(current, bool):
+            return raw.lower() in ("1", "true", "on") if current else raw.lower() not in ("1", "true", "on")
+        if isinstance(current, (int, float)):
+            if not raw:
+                return False
+            try:
+                return float(raw) == float(current)
+            except ValueError:
+                return False
+        return raw == str(current)
+
+    def enforce_role_field_permissions(item):
+        fields = {
+            "tarikh_vorud": item.tarikh_vorud, "saat_vorud": item.saat_vorud,
+            "tarikh_khoruj": item.tarikh_khoruj, "saat_khoruj": item.saat_khoruj,
+            "vazn_esnadi": item.vazn_esnadi, "vazn_por": item.vazn_por,
+            "vazn_khali": item.vazn_khali, "code_kala": item.code_kala,
+            "tedad_baste": item.tedad_baste, "taeed_nahayi": item.taeed_nahayi,
+            "tarikh_taeed": item.tarikh_taeed,
+        }
+        if current_user.role == ROLE_HERASAT:
+            protected = ("vazn_esnadi", "vazn_por", "vazn_khali", "code_kala", "tedad_baste", "taeed_nahayi", "tarikh_taeed")
+        elif current_user.role == ROLE_ANBAR:
+            protected = ("tarikh_vorud", "saat_vorud", "tarikh_khoruj", "saat_khoruj", "taeed_nahayi", "tarikh_taeed")
+        elif current_user.role == ROLE_PROJECT:
+            protected = ("tarikh_vorud", "saat_vorud", "tarikh_khoruj", "saat_khoruj", "vazn_esnadi", "vazn_por", "vazn_khali", "code_kala", "tedad_baste")
+        else:
+            protected = ()
+        for field in protected:
+            if not form_value_matches(field, fields[field]):
+                raise ValueError("نقش کاربری شما اجازه تغییر یکی از فیلدهای ارسال‌شده را ندارد.")
+
     @app.route("/havaleh/<int:id>/edit", methods=["GET", "POST"])
     @require_roles(ROLE_ADMIN, ROLE_HERASAT, ROLE_ANBAR, ROLE_PROJECT)
     def havaleh_edit(id):
@@ -345,10 +389,7 @@ def create_app(test_config=None):
         if request.method == "POST":
             try:
                 old_status = item.vaziyat_havaleh
-                if current_user.role == ROLE_HERASAT and any(request.form.get(k) for k in ("vazn_por", "vazn_khali", "code_kala", "vazn_esnadi")):
-                    # Security may register entry/exit and attachments, not alter warehouse weights.
-                    if request.form.get("vazn_por", "") != (str(item.vazn_por) if item.vazn_por is not None else "") or request.form.get("vazn_khali", "") != (str(item.vazn_khali) if item.vazn_khali is not None else "") or request.form.get("code_kala", "") != (item.code_kala or "") or request.form.get("vazn_esnadi", "") != (str(item.vazn_esnadi) if item.vazn_esnadi is not None else ""):
-                        raise ValueError("نقش حراست اجازه تغییر وزن‌ها یا کد کالا را ندارد.")
+                enforce_role_field_permissions(item)
                 apply_form(item)
                 log_action("update", "Havaleh", item.id, f"وضعیت: {old_status} ← {item.vaziyat_havaleh}")
                 db.session.commit()
