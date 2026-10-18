@@ -93,11 +93,11 @@ def test_blank_print_form_matches_online_registration_fields(client):
     login(client)
     response = client.get("/havaleh/blank-print")
     assert response.status_code == 200
-    for label in ["ایندکس / کد کالا", "نوع وسیله", "پلاک تریلر", "وزن اسنادی", "وزن پُر باسکول", "وزن خالی باسکول", "وضعیت مغایرت", "مسئول پیگیری", "تأییدکننده نهایی"]:
+    for label in ["ایندکس / کد کالا", "نوع وسیله", "وزن اسنادی", "وزن پُر باسکول", "وزن خالی باسکول", "وضعیت مغایرت", "مسئول پیگیری", "تأییدکننده نهایی"]:
         assert label.encode("utf-8") in response.data
 
 
-def test_vehicle_type_and_trailer_plate_are_saved(client, app):
+def test_vehicle_type_is_saved(client, app):
     login(client)
     token = csrf(client, "/havaleh/new")
     response = client.post("/havaleh/new", data={
@@ -105,7 +105,6 @@ def test_vehicle_type_and_trailer_plate_are_saved(client, app):
         "shomare_havaleh": "VEHICLE-TEST",
         "noe_vasileh": "تریلی",
         "pelak": "12الف345ایران67",
-        "pelak_trailer": "45ب678ایران90",
         "vaziyat_havaleh": "ثبت‌شده",
         "vaziyat_moghayerat": "بدون مغایرت",
         "ghabz_por_piost": "خیر",
@@ -115,7 +114,6 @@ def test_vehicle_type_and_trailer_plate_are_saved(client, app):
     with app.app_context():
         item = Havaleh.query.filter_by(shomare_havaleh="VEHICLE-TEST").one()
         assert item.noe_vasileh == "تریلی"
-        assert item.pelak_trailer == "45ب678ایران90"
 
 def test_completion_refuses_unknown_inventory_code(client, app):
     login(client)
