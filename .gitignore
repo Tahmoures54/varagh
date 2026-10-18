@@ -13,3 +13,11 @@ data/*.db
 .idea/
 .vscode/
 *.log
+
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+data/receipts/
+uploads/
+instance/
