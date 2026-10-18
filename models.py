@@ -176,3 +176,18 @@ class AuditLog(db.Model):
     detail = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user = db.relationship('User')
+
+
+class TransferControl(db.Model):
+    """Single-row tracking for expert valuation and final transfer reconciliation."""
+    __tablename__ = "transfer_control"
+    id = db.Column(db.Integer, primary_key=True, default=1)
+    agreement_signed_on = db.Column(db.Date, nullable=True)
+    valuation_announced_on = db.Column(db.Date, nullable=True)
+    valuation_price_per_kg = db.Column(db.Float, nullable=True)
+    valuation_reference = db.Column(db.String(300), nullable=True)
+    final_summary_signed_on = db.Column(db.Date, nullable=True)
+    final_summary_signed_by = db.Column(db.String(200), nullable=True)
+    final_summary_notes = db.Column(db.Text, nullable=True)
+    final_summary_snapshot = db.Column(db.Text, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
