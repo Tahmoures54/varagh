@@ -134,9 +134,11 @@ class Havaleh(db.Model):
 
     @property
     def vaziyat_ghabzha(self):
-        if self.ghabz_por_piost == 'بله' and self.ghabz_khali_piost == 'بله':
+        full_receipt = self.ghabz_por_piost == 'بله'
+        empty_receipt = self.ghabz_khali_piost == 'بله'
+        if full_receipt and empty_receipt:
             return 'کامل'
-        if self.ghabz_por_piost or self.ghabz_khali_piost:
+        if full_receipt or empty_receipt:
             return 'ناقص'
         return None
 
