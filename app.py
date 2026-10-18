@@ -368,6 +368,12 @@ def create_app(test_config=None):
         followups = [h for h in all_items if h.vaziyat_havaleh in ("ناقص", "نیازمند بررسی") or h.vaziyat_moghayerat != "بدون مغایرت" or not h.ghabz_por_file or not h.ghabz_khali_file]
         return render_template("index.html", stats=stats, followups=followups[:100])
 
+    @havaleh_bp.route("/havaleh/blank-print")
+    @login_required
+    def blank_print():
+        """Display a printable blank paper voucher for manual completion."""
+        return render_template("havaleh_blank_print.html")
+
     @havaleh_bp.route("/havaleh")
     @login_required
     def havaleh_list():
