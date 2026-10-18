@@ -42,6 +42,10 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
     @property
+    def is_active(self):
+        return bool(self.is_active_user)
+
+    @property
     def role_label(self):
         return ROLES.get(self.role, self.role)
 
