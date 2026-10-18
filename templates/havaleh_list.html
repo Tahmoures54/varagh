@@ -2,14 +2,17 @@
 {% block title %}لیست حواله‌ها{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4><i class="bi bi-list-ul"></i> لیست حواله‌ها</h4>
-  <a href="{{ url_for('havaleh_new') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> ثبت حواله جدید</a>
+<div class="page-heading">
+  <div class="heading-group">
+    <span class="heading-icon"><i class="bi bi-receipt-cutoff"></i></span>
+    <div><h4>لیست حواله‌ها</h4><p>جستجو، بررسی وضعیت، مغایرت وزن و اسناد هر حواله</p></div>
+  </div>
+  <a href="{{ url_for('havaleh_new') }}" class="btn btn-primary"><i class="bi bi-plus-lg ms-1"></i> ثبت حواله جدید</a>
 </div>
 
-<form class="row g-2 mb-3" method="get">
+<form class="card p-3 mb-3" method="get"><div class="row g-2 align-items-center">
   <div class="col-md-4">
-    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="جستجو: شماره حواله، پلاک، راننده، کالا...">
+    <div class="input-group"><span class="input-group-text bg-white border-start-0" style="border-color:#dce5ed;border-radius:0 10px 10px 0"><i class="bi bi-search text-muted"></i></span><input type="text" name="q" value="{{ q }}" class="form-control border-end-0" style="border-radius:10px 0 0 10px" placeholder="جستجو: شماره حواله، پلاک، راننده، کالا..."></div>
   </div>
   <div class="col-md-3">
     <select name="status" class="form-select">
