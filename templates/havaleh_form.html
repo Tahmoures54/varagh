@@ -2,14 +2,20 @@
 {% block title %}{% if item %}ویرایش حواله{% else %}ثبت حواله جدید{% endif %}{% endblock %}
 
 {% block content %}
-<h4 class="mb-3">
-  <i class="bi bi-{% if item %}pencil{% else %}plus-circle{% endif %}"></i>
-  {% if item %}ویرایش حواله {{ item.shomare_havaleh }}{% else %}ثبت حواله جدید{% endif %}
-</h4>
+<div class="page-heading">
+  <div class="heading-group">
+    <span class="heading-icon"><i class="bi bi-{% if item %}pencil-square{% else %}plus-circle-fill{% endif %}"></i></span>
+    <div>
+      <h4>{% if item %}ویرایش حواله {{ item.shomare_havaleh }}{% else %}ثبت حواله جدید{% endif %}</h4>
+      <p>اطلاعات را با دقت ثبت کنید؛ فیلدهای وزن و اسناد در کنترل نهایی استفاده می‌شوند.</p>
+    </div>
+  </div>
+  <a href="{{ url_for('havaleh_list') }}" class="btn btn-outline-primary"><i class="bi bi-arrow-right ms-1"></i> بازگشت به حواله‌ها</a>
+</div>
 
-<form method="post" enctype="multipart/form-data" class="card p-4">
+<form method="post" enctype="multipart/form-data" class="card p-3 p-lg-4">
   <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-  <div class="section-title">الف) اطلاعات حواله و وسیله نقلیه</div>
+  <div class="section-title"><i class="bi bi-truck"></i> الف) اطلاعات حواله و وسیله نقلیه</div>
   <div class="row g-3 mb-4">
     <div class="col-md-3">
       <label class="form-label">شماره حواله (در صورت خالی بودن، خودکار ساخته می‌شود)</label>
@@ -58,7 +64,7 @@
     </div>
   </div>
 
-  <div class="section-title" style="background:#548235">ب) ورود و خروج از لیدان فراسکو</div>
+  <div class="section-title"><i class="bi bi-clock-history"></i> ب) ورود و خروج از لیدان فراسکو</div>
   <div class="row g-3 mb-4">
     <div class="col-md-3">
       <label class="form-label">تاریخ ورود</label>
@@ -88,7 +94,7 @@
     {% endif %}
   </div>
 
-  <div class="section-title" style="background:#C65911">ج) اطلاعات باسکول و پیوست مدارک</div>
+  <div class="section-title"><i class="bi bi-speedometer"></i> ج) اطلاعات باسکول و پیوست مدارک</div>
   <div class="row g-3 mb-4">
     <div class="col-md-3">
       <label class="form-label">وزن پُر باسکول (کیلوگرم)</label>
@@ -132,7 +138,7 @@
     </div>
   </div>
 
-  <div class="section-title" style="background:#7030A0">د) وضعیت کنترل و پیگیری</div>
+  <div class="section-title"><i class="bi bi-clipboard2-check"></i> د) وضعیت کنترل و پیگیری</div>
   <div class="row g-3 mb-4">
     <div class="col-md-3">
       <label class="form-label">وضعیت حواله</label>
