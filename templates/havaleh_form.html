@@ -216,13 +216,17 @@
   const selector = document.getElementById("code-kala-select");
   const nameField = document.querySelector('[name="sharh_kala"]');
   const specField = document.querySelector('[name="moshakhasat_varagh"]');
+  const locationField = document.getElementById("mogheiyat-varagh");
   if (!selector || !nameField || !specField) return;
+  const selected = selector.options[selector.selectedIndex];
+  if (selected && locationField && selected.value) locationField.value = selected.dataset.location || "";
   selector.addEventListener("change", function () {
     const option = selector.options[selector.selectedIndex];
     if (!option || !option.value) return;
     if (option.dataset.name) nameField.value = option.dataset.name;
     if (option.dataset.spec) specField.value = option.dataset.spec;
     else if (option.dataset.thickness) specField.value = "ضخامت " + option.dataset.thickness;
+    if (locationField) locationField.value = option.dataset.location || "";
   });
 })();
 </script>
