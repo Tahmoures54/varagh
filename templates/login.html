@@ -56,7 +56,7 @@
     <section class="login-main">
       <div class="eyebrow"><i class="bi bi-shield-lock-fill ms-1"></i> دسترسی امن کاربران</div>
       <h1 class="login-title">خوش آمدید</h1>
-      <p class="login-subtitle">برای ورود به پنل مدیریت، نام کاربری و رمز عبور خود را وارد کنید.</p>
+      <p class="login-subtitle">برای ورود به سامانه، شماره تلفن ثبت‌شده و رمز عبور خود را وارد کنید.</p>
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% for cat, msg in messages %}
           <div class="alert alert-{{ cat }} py-2 mb-3" role="alert">{{ msg }}</div>
@@ -65,8 +65,8 @@
       <form method="post" autocomplete="on">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
         <div class="mb-3">
-          <label class="form-label" for="username">نام کاربری</label>
-          <div class="input-wrap"><i class="bi bi-person"></i><input id="username" type="text" name="username" class="form-control" autocomplete="username" required autofocus></div>
+          <label class="form-label" for="username">شماره تلفن همراه</label>
+          <div class="input-wrap"><i class="bi bi-phone"></i><input id="username" type="tel" name="username" class="form-control" inputmode="tel" dir="ltr" placeholder="09123456789" pattern="09[0-9]{9}" title="شماره همراه را با ۰۹ و ۱۱ رقم وارد کنید." autocomplete="username" required autofocus></div>
         </div>
         <div class="mb-4">
           <label class="form-label" for="password">رمز عبور</label>
@@ -74,7 +74,7 @@
         </div>
         <button type="submit" class="btn btn-primary w-100"><i class="bi bi-box-arrow-in-left ms-1"></i> ورود به سامانه</button>
       </form>
-      <div class="login-note"><i class="bi bi-info-circle-fill"></i><span>حساب مدیر اولیه هنگام راه‌اندازی و با تنظیم امن متغیر <b>VARAGH_ADMIN_PASSWORD</b> ایجاد می‌شود. در صورت نداشتن حساب، با مدیر سامانه تماس بگیرید.</span></div>
+      <div class="login-note"><i class="bi bi-info-circle-fill"></i><span>شماره همراه مدیر از طریق متغیر امن <b>VARAGH_ADMIN_PHONE</b> تنظیم می‌شود. ورود با شماره همراه، به‌تنهایی تأیید پیامکی محسوب نمی‌شود.</span></div>
     </section>
   </div>
 </body>
