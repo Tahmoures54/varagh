@@ -924,9 +924,9 @@ def parse_flexible_date(raw):
     raw = (raw or "").strip().translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789"))
     if not raw:
         return None
-    if re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}", raw):
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
         return date.fromisoformat(raw)
-    match = re.fullmatch(r"(\\d{4})[/-](\\d{1,2})[/-](\\d{1,2})", raw)
+    match = re.fullmatch(r"(\d{4})[/-](\d{1,2})[/-](\d{1,2})", raw)
     if not match:
         raise ValueError("تاریخ را به شکل شمسی سال/ماه/روز وارد کنید؛ نمونه: ۱۴۰۵/۰۷/۲۶")
     jy, jm, jd = map(int, match.groups())
