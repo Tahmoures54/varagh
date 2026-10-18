@@ -157,16 +157,16 @@ def create_app(test_config=None):
         if not isinstance(value, date):
             return str(value)
         jy, jm, jd = gregorian_to_jalali(value.year, value.month, value.day)
-        return f"{jy:04d}/{jm:02d}/{jd:02d}"
+        return f"{jy:04d}/{jm:02d}/{jd:02d}".translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
 
     def parse_date(field):
         raw = (request.form.get(field) or "").strip()
         if not raw:
             return None
         try:
-            return date.fromisoformat(raw)
-        except ValueError:
-            raise ValueError(f"مقدار تاریخ «{field}» معتبر نیست.")
+            return parse_flexible_date(raw)
+        except ValueError as exc:
+            raise ValueError(f"مقدار تاریخ «{field}» معتبر نیست: {exc}")
 
     def parse_time(field):
         raw = (request.form.get(field) or "").strip()
@@ -426,7 +426,10 @@ def create_app(test_config=None):
         if isinstance(current, datetime):
             current = current.date()
         if isinstance(current, date):
-            return raw == current.isoformat()
+            try:
+                return parse_flexible_date(raw) == current
+            except ValueError:
+                return False
         if isinstance(current, time):
             return raw == current.strftime("%H:%M")
         if isinstance(current, bool):
@@ -878,6 +881,61 @@ def gregorian_to_jalali(gy, gm, gd):
         jm = 7 + (days - 186) // 30
         jd = 1 + (days - 186) % 30
     return jy, jm, jd
+
+
+def jalali_to_gregorian(jy, jm, jd):
+    """Convert a Jalali calendar date to Gregorian without third-party dependencies."""
+    jy -= 979
+    jm -= 1
+    jd -= 1
+    j_day_no = 365 * jy + (jy // 33) * 8 + ((jy % 33 + 3) // 4)
+    for month in range(jm):
+        j_day_no += 31 if month < 6 else 30
+    j_day_no += jd
+    g_day_no = j_day_no + 79
+    gy = 1600 + 400 * (g_day_no // 146097)
+    g_day_no %= 146097
+    leap = True
+    if g_day_no >= 36525:
+        g_day_no -= 1
+        gy += 100 * (g_day_no // 36524)
+        g_day_no %= 36524
+        if g_day_no >= 365:
+            g_day_no += 1
+        else:
+            leap = False
+    gy += 4 * (g_day_no // 1461)
+    g_day_no %= 1461
+    if g_day_no >= 366:
+        leap = False
+        g_day_no -= 1
+        gy += g_day_no // 365
+        g_day_no %= 365
+    month_days = [31, 29 if leap else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    gm = 1
+    while gm <= 12 and g_day_no >= month_days[gm - 1]:
+        g_day_no -= month_days[gm - 1]
+        gm += 1
+    return date(gy, gm, g_day_no + 1)
+
+
+def parse_flexible_date(raw):
+    """Accept Jalali YYYY/MM/DD (Persian or Latin digits) and legacy ISO Gregorian dates."""
+    raw = (raw or "").strip().translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789"))
+    if not raw:
+        return None
+    if re.fullmatch(r"\\d{4}-\\d{2}-\\d{2}", raw):
+        return date.fromisoformat(raw)
+    match = re.fullmatch(r"(\\d{4})[/-](\\d{1,2})[/-](\\d{1,2})", raw)
+    if not match:
+        raise ValueError("تاریخ را به شکل شمسی سال/ماه/روز وارد کنید؛ نمونه: ۱۴۰۵/۰۷/۲۶")
+    jy, jm, jd = map(int, match.groups())
+    if not (1 <= jm <= 12 and 1 <= jd <= (31 if jm <= 6 else 30 if jm <= 11 else 30)):
+        raise ValueError("تاریخ شمسی واردشده معتبر نیست.")
+    converted = jalali_to_gregorian(jy, jm, jd)
+    if gregorian_to_jalali(converted.year, converted.month, converted.day) != (jy, jm, jd):
+        raise ValueError("تاریخ شمسی واردشده معتبر نیست.")
+    return converted
 
 
 app = create_app()
