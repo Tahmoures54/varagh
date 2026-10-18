@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}داشبورد | کنترل حمل ورق فراسکو{% endblock %}
+
+{% block content %}
+<h4 class="mb-4"><i class="bi bi-speedometer2"></i> داشبورد و گزارش جمع‌بندی</h4>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card stat-card text-center p-3">
+      <div class="text-muted small">کل حواله‌ها</div>
+      <div class="stat-value text-primary">{{ stats.total }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card text-center p-3">
+      <div class="text-muted small">تکمیل‌شده</div>
+      <div class="stat-value text-success">{{ stats.completed }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card text-center p-3">
+      <div class="text-muted small">ناقص</div>
+      <div class="stat-value text-danger">{{ stats.incomplete }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card stat-card text-center p-3">
+      <div class="text-muted small">نیازمند بررسی</div>
+      <div class="stat-value text-warning">{{ stats.need_review }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h6 class="section-title">خلاصه وزنی</h6>
+      <table class="table table-sm mb-0">
+        <tr><td>مجموع وزن اسنادی</td><td class="fw-bold">{{ "{:,.0f}".format(stats.sum_esnadi) }} کیلوگرم</td><td>{{ "{:,.2f}".format(stats.sum_esnadi/1000) }} تن</td></tr>
+        <tr><td>مجموع وزن خالص باسکول</td><td class="fw-bold">{{ "{:,.0f}".format(stats.sum_khales) }} کیلوگرم</td><td>{{ "{:,.2f}".format(stats.sum_khales/1000) }} تن</td></tr>
+        <tr><td>بالانس کل (خالص − اسنادی)</td>
+          <td class="fw-bold {% if stats.balance < 0 %}text-danger{% else %}text-success{% endif %}">
+            {{ "{:,.0f}".format(stats.balance) }} کیلوگرم
+          </td>
+          <td>{{ "{:,.2f}".format(stats.balance/1000) }} تن</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h6 class="section-title">مغایرت و مدت توقف</h6>
+      <table class="table table-sm mb-0">
+        <tr><td>مغایرت مثبت (اضافه)</td><td>{{ stats.pos_diff }} مورد</td><td>{{ "{:,.0f}".format(stats.sum_pos) }} کیلوگرم</td></tr>
+        <tr><td>مغایرت منفی (کسری)</td><td>{{ stats.neg_diff }} مورد</td><td>{{ "{:,.0f}".format(stats.sum_neg) }} کیلوگرم</td></tr>
+        <tr><td>فاقد قبض پر / خالی</td><td>{{ stats.no_ghabz_por }} / {{ stats.no_ghabz_khali }}</td><td></td></tr>
+        <tr><td>مجموع / میانگین مدت توقف</td><td>{{ stats.total_duration }} ساعت</td><td>میانگین {{ stats.avg_duration }} ساعت</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card p-3">
+  <h6 class="section-title"><i class="bi bi-exclamation-triangle"></i> حواله‌های نیازمند پیگیری</h6>
+  {% if followups %}
+  <div class="table-responsive">
+    <table class="table table-hover table-sm">
+      <thead class="table-light">
+        <tr>
+          <th>شماره حواله</th>
+          <th>پلاک</th>
+          <th>وضعیت حواله</th>
+          <th>وضعیت مغایرت</th>
+          <th>شرح مغایرت</th>
+          <th>اختلاف وزن</th>
+          <th>وضعیت قبض‌ها</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in followups %}
+        <tr>
+          <td>{{ h.shomare_havaleh }}</td>
+          <td>{{ h.pelak or '—' }}</td>
+          <td>
+            {% if h.vaziyat_havaleh == 'تکمیل‌شده' %}
+              <span class="badge badge-complete">{{ h.vaziyat_havaleh }}</span>
+            {% elif h.vaziyat_havaleh == 'ناقص' %}
+              <span class="badge badge-incomplete">{{ h.vaziyat_havaleh }}</span>
+            {% elif h.vaziyat_havaleh == 'نیازمند بررسی' %}
+              <span class="badge badge-review">{{ h.vaziyat_havaleh }}</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ h.vaziyat_havaleh }}</span>
+            {% endif %}
+          </td>
+          <td>{{ h.vaziyat_moghayerat or '—' }}</td>
+          <td>{{ h.sharh_moghayerat or '—' }}</td>
+          <td>{% if h.ekhtelaf_vazn is not none %}{{ "{:,.0f}".format(h.ekhtelaf_vazn) }}{% else %}—{% endif %}</td>
+          <td>{{ h.vaziyat_ghabzha or '—' }}</td>
+          <td><a href="{{ url_for('havaleh_edit', id=h.id) }}" class="btn btn-sm btn-outline-primary">ویرایش</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted mb-0">مورد نیازمند پیگیری وجود ندارد.</p>
+  {% endif %}
+</div>
+{% endblock %}
