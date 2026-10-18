@@ -4,9 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#10243a">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="{% block meta_description %}سامانه هوشمند مدیریت حواله و موجودی ورق فولادی فراسکو{% endblock %}">
   <title>{% block title %}کنترل حمل ورق فولادی فراسکو{% endblock %}</title>
+
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+  {# پیشنهاد: این بلوک را به static/css/app.css منتقل کنید و با
+     url_for('static', filename='css/app.css', v='1') فراخوانی کنید تا کش شود. #}
   <style>
     :root {
       --ink: #172b42;
@@ -20,7 +27,7 @@
       --shadow: 0 8px 28px rgba(21, 44, 68, .06);
       --shadow-hover: 0 14px 32px rgba(21, 44, 68, .11);
     }
-    * { box-sizing: border-box; }
+
     body {
       font-family: Tahoma, "Segoe UI", sans-serif;
       color: var(--ink);
@@ -30,7 +37,30 @@
       min-height: 100vh;
       font-size: .92rem;
     }
+
+    /* ---------- پرش به محتوا ---------- */
+    .skip-link {
+      position: fixed;
+      top: .6rem;
+      inset-inline-start: .6rem;
+      z-index: 2000;
+      padding: .6rem 1rem;
+      border-radius: 10px;
+      background: var(--teal-dark);
+      color: #fff;
+      font-weight: 700;
+      font-size: .82rem;
+      text-decoration: none;
+      transform: translateY(-160%);
+      transition: transform .18s ease;
+    }
+    .skip-link:focus { transform: translateY(0); color: #fff; }
+
+    /* ---------- نوار بالا ---------- */
     .app-navbar {
+      position: sticky;
+      top: 0;
+      z-index: 1030;
       background: linear-gradient(112deg, #0e2034 0%, #173c56 68%, #126a70 100%);
       padding: .85rem 0;
       box-shadow: 0 5px 24px rgba(9, 28, 46, .18);
@@ -38,25 +68,45 @@
     }
     .navbar-brand { display: flex; align-items: center; gap: .7rem; letter-spacing: -.3px; }
     .brand-mark {
-      width: 42px; height: 42px; display: inline-grid; place-items: center;
+      width: 42px; height: 42px; flex: 0 0 42px; display: inline-grid; place-items: center;
       background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.16);
       border-radius: 14px; font-size: 1.25rem; color: #7ce5dc;
     }
     .brand-copy { display: flex; flex-direction: column; line-height: 1.55; }
     .brand-copy small { color: #b8c9d8; font-size: .68rem; font-weight: 400; }
+
     .navbar-nav { gap: .2rem; }
     .navbar .nav-link {
-      color: #d8e5ee; padding: .6rem .8rem !important; border-radius: 10px;
-      font-size: .83rem; transition: background .18s, color .18s;
+      display: flex;              /* جایگزین margin-left روی آیکن */
+      align-items: center;
+      gap: .4rem;
+      color: #d8e5ee;
+      padding: .6rem .8rem !important;
+      border-radius: 10px;
+      font-size: .83rem;
+      transition: background .18s, color .18s;
     }
-    .navbar .nav-link:hover, .navbar .nav-link:focus {
-      background: rgba(255,255,255,.1); color: #fff;
+    .navbar .nav-link:hover,
+    .navbar .nav-link:focus { background: rgba(255,255,255,.1); color: #fff; }
+    .navbar .nav-link.active {
+      background: rgba(255,255,255,.16);
+      color: #fff;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
     }
-    .navbar .nav-link i { margin-left: .3rem; }
-    .logout-btn { border-color: rgba(255,255,255,.3); border-radius: 10px; padding: .45rem .8rem; }
+    .logout-btn {
+      display: inline-flex; align-items: center; gap: .35rem;
+      border-color: rgba(255,255,255,.3); border-radius: 10px; padding: .45rem .8rem;
+    }
+
+    /* ---------- چیدمان ---------- */
     main.container { max-width: 1500px; padding-top: 1.6rem; }
-    .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem; }
-    .page-heading h1, .page-heading h2, .page-heading h3, .page-heading h4 {
+
+    .page-heading {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; flex-wrap: wrap; margin-bottom: 1.4rem;
+    }
+    .page-heading h1, .page-heading h2,
+    .page-heading h3, .page-heading h4 {
       font-size: 1.28rem; font-weight: 800; margin: 0; letter-spacing: -.4px;
     }
     .page-heading p { margin: .4rem 0 0; color: var(--muted); font-size: .82rem; }
@@ -65,36 +115,74 @@
       border-radius: 13px; color: var(--teal-dark); background: #dcf7f3; font-size: 1.2rem;
     }
     .heading-group { display: flex; align-items: center; gap: .8rem; }
+
+    /* ---------- کارت‌ها ---------- */
     .card {
       border: 1px solid rgba(222,231,240,.9); border-radius: 17px;
       box-shadow: var(--shadow); background: #fff; overflow: hidden;
     }
-    .stat-card { position: relative; overflow: hidden; transition: transform .2s, box-shadow .2s; min-height: 124px; }
+    .stat-card {
+      position: relative; overflow: hidden; min-height: 124px;
+      transition: transform .2s, box-shadow .2s;
+    }
     .stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
-    .stat-card::before { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 4px; background: var(--accent, var(--teal)); }
-    .stat-icon { width: 39px; height: 39px; border-radius: 12px; display: grid; place-items: center; background: var(--icon-bg, #e0f7f4); color: var(--accent, var(--teal-dark)); font-size: 1.05rem; }
+    .stat-card::before {
+      content: "";
+      position: absolute;
+      inset-inline-start: 0;   /* جایگزین right:0 برای مستقل بودن از جهت */
+      top: 0; bottom: 0; width: 4px;
+      background: var(--accent, var(--teal));
+    }
+    .stat-icon {
+      width: 39px; height: 39px; border-radius: 12px; display: grid; place-items: center;
+      background: var(--icon-bg, #e0f7f4); color: var(--accent, var(--teal-dark)); font-size: 1.05rem;
+    }
     .stat-label { color: var(--muted); font-size: .79rem; font-weight: 600; }
-    .stat-value { font-size: 1.75rem; font-weight: 800; color: var(--ink); line-height: 1.25; margin-top: .35rem; font-variant-numeric: tabular-nums; }
+    .stat-value {
+      font-size: 1.75rem; font-weight: 800; color: var(--ink);
+      line-height: 1.25; margin-top: .35rem; font-variant-numeric: tabular-nums;
+    }
     .stat-foot { color: #91a0af; font-size: .7rem; margin-top: .35rem; }
+
     .section-title {
       display: flex; align-items: center; gap: .55rem; color: var(--ink);
       background: #f6f9fc; border: 1px solid var(--line); border-radius: 12px;
       padding: .75rem .95rem; margin-bottom: 1rem; font-size: .9rem; font-weight: 800;
     }
     .section-title i { color: var(--teal-dark); }
-    .btn { border-radius: 10px; font-weight: 600; font-size: .84rem; padding: .58rem .9rem; transition: transform .15s, box-shadow .15s; }
+
+    /* ---------- دکمه‌ها و فرم‌ها ---------- */
+    .btn {
+      border-radius: 10px; font-weight: 600; font-size: .84rem; padding: .58rem .9rem;
+      transition: transform .15s, box-shadow .15s;
+    }
     .btn:hover { transform: translateY(-1px); }
-    .btn-primary { --bs-btn-bg: var(--teal-dark); --bs-btn-border-color: var(--teal-dark); --bs-btn-hover-bg: #066b68; --bs-btn-hover-border-color: #066b68; --bs-btn-active-bg: #055d5a; box-shadow: 0 4px 12px rgba(8,127,123,.16); }
-    .btn-outline-primary { --bs-btn-color: var(--teal-dark); --bs-btn-border-color: #b8dedb; --bs-btn-hover-bg: var(--teal-dark); --bs-btn-hover-border-color: var(--teal-dark); }
+    .btn-primary {
+      --bs-btn-bg: var(--teal-dark);
+      --bs-btn-border-color: var(--teal-dark);
+      --bs-btn-hover-bg: #066b68;
+      --bs-btn-hover-border-color: #066b68;
+      --bs-btn-active-bg: #055d5a;
+      box-shadow: 0 4px 12px rgba(8,127,123,.16);
+    }
+    .btn-outline-primary {
+      --bs-btn-color: var(--teal-dark);
+      --bs-btn-border-color: #b8dedb;
+      --bs-btn-hover-bg: var(--teal-dark);
+      --bs-btn-hover-border-color: var(--teal-dark);
+    }
+
     .form-control, .form-select {
-      min-height: 42px; border-radius: 10px; border-color: #dce5ed; font-size: .87rem;
-      color: var(--ink); background-color: #fff;
+      min-height: 42px; border-radius: 10px; border-color: #dce5ed;
+      font-size: .87rem; color: var(--ink); background-color: #fff;
     }
     textarea.form-control { min-height: auto; }
     .form-control:focus, .form-select:focus {
       border-color: #63c8c1; box-shadow: 0 0 0 .2rem rgba(16,166,160,.13);
     }
     .form-label { font-weight: 700; font-size: .81rem; color: #40546a; margin-bottom: .45rem; }
+
+    /* ---------- جدول ---------- */
     .table { --bs-table-color: var(--ink); margin-bottom: 0; }
     .table thead th {
       background: #f5f8fb; color: #627489; border-bottom: 1px solid var(--line);
@@ -102,88 +190,182 @@
     }
     .table td { font-size: .81rem; vertical-align: middle; padding: .8rem; border-color: #edf1f5; }
     .table-hover tbody tr:hover > * { --bs-table-bg: #f5fbfb; }
-    .badge { font-size: .72rem; padding: .42rem .65rem; border-radius: 7px; font-weight: 700; }
-    .badge-complete { background: #d8f5e7; color: #167447; }
-    .badge-incomplete { background: #ffe3e4; color: #b4232d; }
-    .badge-review { background: #fff0d7; color: #9a5b00; }
-    .badge-exit { background: #dcecff; color: #1b5db4; }
-    .badge-ok { background: #d8f5e7; color: #167447; }
-    .alert { border: 0; border-radius: 12px; box-shadow: 0 3px 12px rgba(20,40,60,.04); }
-    .alert-dismissible .btn-close { padding: .9rem; }
-    .text-muted { color: var(--muted) !important; }
     .card > .table-responsive { border-radius: inherit; }
+
+    /* ---------- نشان‌ها و پیام‌ها ---------- */
+    .badge { font-size: .72rem; padding: .42rem .65rem; border-radius: 7px; font-weight: 700; }
+    .badge-complete   { background: #d8f5e7; color: #167447; }
+    .badge-incomplete { background: #ffe3e4; color: #b4232d; }
+    .badge-review     { background: #fff0d7; color: #9a5b00; }
+    .badge-exit       { background: #dcecff; color: #1b5db4; }
+    .badge-ok         { background: #d8f5e7; color: #167447; }
+
+    .alert {
+      border: 0; border-radius: 12px;
+      box-shadow: 0 3px 12px rgba(20,40,60,.04);
+    }
+    .alert-dismissible .btn-close { padding: .9rem; }
+
+    .text-muted { color: var(--muted) !important; }
     .empty-state { padding: 2.4rem 1rem; text-align: center; color: var(--muted); }
     .empty-state i { display: block; font-size: 2rem; color: #a8bbc9; margin-bottom: .65rem; }
-    footer { margin-top: 3.5rem; padding: 1.5rem 1rem; text-align: center; color: #8b9aaa; font-size: .75rem; border-top: 1px solid #e5ebf1; }
+
+    /* ---------- پاورقی ---------- */
+    footer {
+      margin-top: 3.5rem; padding: 1.5rem 1rem; text-align: center;
+      color: #8b9aaa; font-size: .75rem; border-top: 1px solid #e5ebf1;
+    }
     footer span { color: var(--teal-dark); font-weight: 700; }
+
+    /* ---------- فوکوس قابل مشاهده (دسترس‌پذیری) ---------- */
+    :where(a, button, .btn, .form-control, .form-select, .nav-link, .navbar-toggler):focus-visible {
+      outline: 3px solid rgba(16,166,160,.55);
+      outline-offset: 2px;
+    }
+
+    /* ---------- کاهش حرکت ---------- */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        transition-duration: .001ms !important;
+        animation-duration: .001ms !important;
+      }
+      .btn:hover, .stat-card:hover { transform: none; }
+    }
+
+    /* ---------- واکنش‌گرایی ---------- */
     @media (max-width: 991.98px) {
       .navbar-nav { padding-top: .7rem; }
       .navbar .nav-link { padding: .65rem .8rem !important; }
-      .logout-btn { margin-top: .6rem; width: 100%; }
+      .logout-btn { margin-top: .6rem; width: 100%; justify-content: center; }
     }
     @media (max-width: 575.98px) {
       main.container { padding-top: 1.1rem; }
-      .page-heading h1, .page-heading h2, .page-heading h3, .page-heading h4 { font-size: 1.08rem; }
+      .page-heading h1, .page-heading h2,
+      .page-heading h3, .page-heading h4 { font-size: 1.08rem; }
       .stat-card { min-height: 112px; }
       .stat-value { font-size: 1.45rem; }
       .card { border-radius: 14px; }
       .table td { padding: .65rem; }
     }
+
+    /* ---------- چاپ ---------- */
+    @media print {
+      body { background: #fff; font-size: .78rem; }
+      .app-navbar, footer, .skip-link, .no-print { display: none !important; }
+      main.container { max-width: none; padding-top: 0; }
+      .card { border-color: #c9d3dc; box-shadow: none; break-inside: avoid; }
+      .table thead th { background: #eef2f6 !important; }
+      a[href]::after { content: ""; }   /* جلوگیری از چاپ URL */
+    }
   </style>
+
   {% block extra_css %}{% endblock %}
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-dark app-navbar">
-    <div class="container">
-      <a class="navbar-brand fw-bold" href="{{ url_for("dashboard.index") }}">
-        <span class="brand-mark"><i class="bi bi-truck-front-fill"></i></span>
-        <span class="brand-copy">کنترل حمل ورق فراسکو<small>سامانه هوشمند مدیریت حواله و موجودی</small></span>
+  <a class="skip-link" href="#main-content">رفتن به محتوای اصلی</a>
+
+  {# ماکروی ساخت آیتم منو با تشخیص صفحهٔ فعال #}
+  {% macro nav_link(endpoint, label, icon, prefixes=()) -%}
+    {%- set ep = request.endpoint or '' -%}
+    {%- set is_active = (ep == endpoint) or (prefixes | length > 0 and ep.startswith(prefixes)) -%}
+    <li class="nav-item">
+      <a class="nav-link{{ ' active' if is_active else '' }}"
+         href="{{ url_for(endpoint) }}"
+         {%- if is_active %} aria-current="page"{% endif %}>
+        <i class="bi {{ icon }}" aria-hidden="true"></i><span>{{ label }}</span>
       </a>
-      <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="باز و بسته کردن منو">
+    </li>
+  {%- endmacro %}
+
+  <nav class="navbar navbar-expand-lg navbar-dark app-navbar" aria-label="منوی اصلی">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="{{ url_for('dashboard.index') }}">
+        <span class="brand-mark" aria-hidden="true"><i class="bi bi-truck-front-fill"></i></span>
+        <span class="brand-copy">
+          کنترل حمل ورق فراسکو
+          <small>سامانه هوشمند مدیریت حواله و موجودی</small>
+        </span>
+      </a>
+
+      <button class="navbar-toggler border-0" type="button"
+              data-bs-toggle="collapse" data-bs-target="#nav"
+              aria-controls="nav" aria-expanded="false" aria-label="باز و بسته کردن منو">
         <span class="navbar-toggler-icon"></span>
       </button>
+
       <div class="collapse navbar-collapse" id="nav">
         <ul class="navbar-nav me-auto">
-          <li class="nav-item"><a class="nav-link" href="{{ url_for("dashboard.index") }}"><i class="bi bi-grid-1x2-fill"></i> داشبورد</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for("havaleh.havaleh_list") }}"><i class="bi bi-receipt-cutoff"></i> حواله‌ها</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for("havaleh.havaleh_new") }}"><i class="bi bi-plus-circle-fill"></i> ثبت حواله</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for("havaleh.blank_print") }}"><i class="bi bi-printer-fill"></i> فرم خام حواله</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for("inventory.inventory_list") }}"><i class="bi bi-box-seam-fill"></i> موجودی</a></li>
-          {% if current_user.is_authenticated and current_user.role in ("admin", "project") %}
-          <li class="nav-item"><a class="nav-link" href="{{ url_for("reports.reconciliation") }}"><i class="bi bi-clipboard2-data-fill"></i> جمع‌بندی انتقال</a></li>
-          {% endif %}
-          <li class="nav-item"><a class="nav-link" href="{{ url_for("reports.export_excel") }}"><i class="bi bi-file-earmark-spreadsheet-fill"></i> خروجی اکسل</a></li>
-          {% if current_user.is_authenticated and current_user.role == 'admin' %}
-          <li class="nav-item"><a class="nav-link" href="{{ url_for("users.users") }}"><i class="bi bi-people-fill"></i> کاربران</a></li>
+          {% if current_user.is_authenticated %}
+            {{ nav_link('dashboard.index', 'داشبورد', 'bi-grid-1x2-fill') }}
+            {{ nav_link('havaleh.havaleh_list', 'حواله‌ها', 'bi-receipt-cutoff',
+                        ('havaleh.havaleh_detail', 'havaleh.havaleh_edit')) }}
+            {{ nav_link('havaleh.havaleh_new', 'ثبت حواله', 'bi-plus-circle-fill') }}
+            {{ nav_link('havaleh.blank_print', 'فرم خام حواله', 'bi-printer-fill') }}
+            {{ nav_link('inventory.inventory_list', 'موجودی', 'bi-box-seam-fill', ('inventory.',)) }}
+
+            {% if current_user.role in ('admin', 'project') %}
+              {{ nav_link('reports.reconciliation', 'جمع‌بندی انتقال', 'bi-clipboard2-data-fill') }}
+            {% endif %}
+
+            {{ nav_link('reports.export_excel', 'خروجی اکسل', 'bi-file-earmark-spreadsheet-fill') }}
+
+            {% if current_user.role == 'admin' %}
+              {{ nav_link('users.users', 'کاربران', 'bi-people-fill') }}
+            {% endif %}
+          {% else %}
+            {# اگر نام endpoint ورود متفاوت است، همین‌جا اصلاح کنید #}
+            {{ nav_link('auth.login', 'ورود به سامانه', 'bi-box-arrow-in-left') }}
           {% endif %}
         </ul>
+
         {% if current_user.is_authenticated %}
-        <form method="post" action="{{ url_for("auth.logout") }}" class="d-flex align-items-center">
+        <form method="post" action="{{ url_for('auth.logout') }}" class="d-flex align-items-center">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-          <button class="btn btn-outline-light btn-sm logout-btn" type="submit"><i class="bi bi-box-arrow-right ms-1"></i> خروج · {{ current_user.username }}</button>
+          <button class="btn btn-outline-light btn-sm logout-btn" type="submit">
+            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+            <span>خروج · {{ current_user.username }}</span>
+          </button>
         </form>
         {% endif %}
       </div>
     </div>
   </nav>
 
-  <main class="container">
+  <main class="container" id="main-content">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        {% for cat, msg in messages %}
-          <div class="alert alert-{{ cat }} alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
-            <i class="bi {% if cat == 'success' %}bi-check-circle-fill{% elif cat == 'danger' %}bi-exclamation-octagon-fill{% elif cat == 'warning' %}bi-exclamation-triangle-fill{% else %}bi-info-circle-fill{% endif %}"></i>
-            <div>{{ msg }}</div>
-            <button type="button" class="btn-close me-auto" data-bs-dismiss="alert" aria-label="بستن"></button>
+        {% for category, msg in messages %}
+          {% set style = {
+               'success': 'success', 'error': 'danger', 'danger': 'danger',
+               'warning': 'warning', 'info': 'info', 'message': 'info'
+             }.get(category, 'info') %}
+          {% set icon = {
+               'success': 'bi-check-circle-fill',
+               'danger':  'bi-exclamation-octagon-fill',
+               'error':   'bi-exclamation-octagon-fill',
+               'warning': 'bi-exclamation-triangle-fill',
+               'info':    'bi-info-circle-fill',
+               'message': 'bi-info-circle-fill'
+             }.get(category, 'bi-info-circle-fill') %}
+          <div class="alert alert-{{ style }} alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+            <i class="bi {{ icon }}" aria-hidden="true"></i>
+            <div class="flex-grow-1">{{ msg }}</div>
+            <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="بستن"></button>
           </div>
         {% endfor %}
       {% endif %}
     {% endwith %}
+
     {% block content %}{% endblock %}
   </main>
 
-  <footer>ساخته‌شده برای <span>فراسکو</span> · سامانه کنترل حمل ورق فولادی · ۱۴۰۵</footer>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <footer>
+    ساخته‌شده برای <span>فراسکو</span> · سامانه کنترل حمل ورق فولادی ·
+    {{ jalali_year | default('۱۴۰۵') }}
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+          crossorigin="anonymous"></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>
