@@ -729,7 +729,7 @@ def create_app(test_config=None):
         # The one-time rename migrates the existing admin account without deleting app data.
         admin_phone = (os.environ.get("VARAGH_ADMIN_PHONE") or "").strip()
         bootstrap_password = os.environ.get("VARAGH_ADMIN_PASSWORD") or ""
-        valid_admin_phone = bool(re.fullmatch(r"09\\d{9}", admin_phone))
+        valid_admin_phone = bool(re.fullmatch(r"09\d{9}", admin_phone))
         if valid_admin_phone:
             phone_user = User.query.filter_by(username=admin_phone).first()
             if phone_user is None:
