@@ -1,113 +1,326 @@
 {% extends "base.html" %}
 {% block title %}فرم خام حواله حمل ورق{% endblock %}
-{% block content %}
+
+{% block extra_css %}
 <style>
-  .paper-form{max-width:1100px;margin:auto;background:#fff;color:#111;border:1px solid #bbb;padding:16px;font-size:11px}
-  .paper-form h1,.paper-form h2{color:#111;font-weight:800;margin:0 0 4px}
-  .paper-form h1{font-size:19px}.paper-form h2{font-size:15px}
-  .paper-form .section{background:#edf1f5;border:1px solid #aeb9c5;padding:5px 8px;margin:8px 0 5px;font-weight:800}
-  .paper-form .field{border-bottom:1px dotted #555;min-height:25px;padding:4px 3px}
+  /* ---------- فرم کاغذی (پیش‌نمایش روی صفحه) ---------- */
+  .paper-form{
+    max-width:1100px;margin:auto;background:#fff;color:#111;
+    border:1px solid #bbb;border-radius:6px;padding:16px;font-size:11px;
+  }
+  .paper-form h1{font-size:19px;font-weight:800;margin:0 0 4px}
+  .paper-form .basmala{font-size:12px;font-weight:700;margin-bottom:2px}
+  .paper-form .form-sub{font-size:10px;color:#555;margin:2px 0 0}
+
+  /* توجه: از .paper-form .section استفاده شده تا بر .paper-form h2 غالب شود */
+  .paper-form .section{
+    font-size:12px;font-weight:800;background:#edf1f5;border:1px solid #aeb9c5;
+    border-radius:2px;padding:5px 8px;margin:8px 0 5px;
+  }
+
+  .paper-form .field{
+    border-bottom:1px dotted #555;min-height:25px;padding:4px 3px;
+    display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px;
+  }
   .paper-form .label{font-weight:700}
+  .paper-form .date-ph{color:#777;font-size:10px}
+
+  /* چک‌باکس رسم‌شده با CSS (چاپ پایدار، مستقل از فونت) */
+  .paper-form .opts{display:flex;flex-wrap:wrap;gap:2px 8px}
+  .paper-form .opt{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+  .paper-form .opt::before{
+    content:"";width:10px;height:10px;border:1px solid #333;border-radius:2px;
+    background:#fff;display:inline-block;flex:0 0 auto;
+  }
+
+  .paper-form .table-wrap{overflow-x:auto}
   .paper-form table{width:100%;border-collapse:collapse}
-  .paper-form th,.paper-form td{border:1px solid #444;padding:5px;height:30px;vertical-align:middle}
-  .paper-form th{background:#edf1f5;text-align:center}
-  .paper-form .sign{border:1px solid #777;min-height:48px;padding:5px}
-  .print-tools{max-width:1100px;margin:0 auto 12px;display:flex;gap:8px}
+  .paper-form th,.paper-form td{
+    border:1px solid #444;padding:5px;height:30px;vertical-align:middle;
+  }
+  .paper-form th{background:#edf1f5;text-align:center;font-size:10px;font-weight:800}
+  .paper-form .sign{border:1px solid #777;border-radius:2px;min-height:48px;padding:5px}
+
+  /* ---------- نوار ابزار ---------- */
+  .print-tools{max-width:1100px;margin:0 auto 12px;display:flex;gap:8px;flex-wrap:wrap}
+
+  @media (max-width:575.98px){
+    .paper-form{padding:8px;font-size:10px}
+  }
+
+  /* ---------- چاپ ---------- */
   @page{size:A4 landscape;margin:8mm}
   @media print{
-    nav,footer,.print-tools,.flash-container{display:none!important}
-    main.container{max-width:none!important;width:100%!important;margin:0!important;padding:0!important}
-    .paper-form{max-width:none;border:1px solid #222;padding:8px;font-size:9px}
-    .paper-form h1{font-size:16px}.paper-form h2{font-size:12px}
-    .paper-form .section{margin:5px 0 3px;padding:3px 5px}
+    html,body{background:#fff!important}
+    .app-navbar,footer,.skip-link,.no-print,
+    #main-content .alert{display:none!important}
+    main.container{
+      max-width:none!important;width:100%!important;
+      margin:0!important;padding:0!important;
+    }
+
+    .paper-form{
+      max-width:none;border:1px solid #222;border-radius:0;
+      padding:6px;font-size:9px;
+    }
+    .paper-form h1{font-size:15px}
+    .paper-form .section{
+      font-size:10px;margin:5px 0 3px;padding:3px 5px;
+      break-after:avoid;
+    }
     .paper-form .field{min-height:19px;padding:2px}
-    .paper-form th,.paper-form td{height:23px;padding:3px}
+    .paper-form th,.paper-form td{height:24px;padding:3px;font-size:8.5px}
+    .paper-form th{font-size:8.5px}
     .paper-form .sign{min-height:38px;padding:4px}
-    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .paper-form .opt::before{width:8px;height:8px}
+    .paper-form .date-ph{font-size:8px}
+
+    .paper-form .table-wrap{overflow:visible}
+    .paper-form thead{display:table-header-group}
+    .paper-form .row{break-inside:avoid}
+
+    /* اسکوپ‌شده به‌جای * */
+    .paper-form,.paper-form *{
+      -webkit-print-color-adjust:exact;print-color-adjust:exact;
+    }
   }
 </style>
-<div class="print-tools">
-  <a class="btn btn-outline-primary" href="{{ url_for('havaleh.havaleh_list') }}"><i class="bi bi-arrow-right ms-1"></i> بازگشت به حواله‌ها</a>
-  <button class="btn btn-primary" type="button" onclick="window.print()"><i class="bi bi-printer ms-1"></i> چاپ فرم خام</button>
+{% endblock %}
+
+{% block content %}
+<div class="print-tools no-print">
+  <a class="btn btn-outline-primary" href="{{ url_for('havaleh.havaleh_list') }}">
+    <i class="bi bi-arrow-right me-1" aria-hidden="true"></i> بازگشت به حواله‌ها
+  </a>
+  <button class="btn btn-primary" type="button" id="btnPrint">
+    <i class="bi bi-printer me-1" aria-hidden="true"></i> چاپ فرم خام
+  </button>
 </div>
-<section class="paper-form" aria-label="فرم خام همسان با ثبت دیجیتال حواله">
-  <div class="text-center mb-2">
-    <h2>بسمه تعالی</h2>
+
+<section class="paper-form" aria-label="فرم خام حواله حمل ورق فولادی">
+  <header class="text-center mb-2">
+    <div class="basmala">بسمه تعالی</div>
     <h1>شرکت فراسکو ـ حواله حمل ورق فولادی</h1>
-    <div>فرم خام برای تکمیل دستی در محل؛ سپس ورود اطلاعات در سامانه Varagh</div>
-  </div>
+    <p class="form-sub">
+      فرم خام برای تکمیل دستی در محل؛ سپس ورود اطلاعات در سامانه
+    </p>
+  </header>
 
-  <div class="section">الف ـ اطلاعات اصلی حواله</div>
+  <h2 class="section">الف ـ اطلاعات اصلی حواله</h2>
   <div class="row g-2">
-    <div class="col-3"><div class="field"><span class="label">شماره حواله:</span></div></div>
-    <div class="col-3"><div class="field"><span class="label">تاریخ حواله (شمسی):</span> سال / ماه / روز </div></div>
-    <div class="col-3"><div class="field"><span class="label">مسئول ثبت:</span></div></div>
-    <div class="col-3"><div class="field"><span class="label">وضعیت حواله:</span> ☐ ثبت‌شده ☐ در حال بررسی ☐ خارج‌شده ☐ ناقص ☐ نیازمند بررسی ☐ تکمیل‌شده</div></div>
+    <div class="col-6 col-md-3">
+      <div class="field"><span class="label">شماره حواله:</span></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="field">
+        <span class="label">تاریخ حواله (شمسی):</span>
+        <span class="date-ph">سال / ماه / روز</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="field"><span class="label">مسئول ثبت:</span></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="field">
+        <span class="label">وضعیت حواله:</span>
+        <span class="opts" role="group" aria-label="وضعیت حواله">
+          <span class="opt">ثبت‌شده</span>
+          <span class="opt">در حال بررسی</span>
+          <span class="opt">خارج‌شده</span>
+          <span class="opt">ناقص</span>
+          <span class="opt">نیازمند بررسی</span>
+          <span class="opt">تکمیل‌شده</span>
+        </span>
+      </div>
+    </div>
   </div>
 
-  <div class="section">ب ـ وسیله نقلیه و راننده</div>
+  <h2 class="section">ب ـ وسیله نقلیه و راننده</h2>
   <div class="row g-2">
-    <div class="col-3"><div class="field"><span class="label">نوع وسیله:</span> ☐ کامیون ☐ تریلی ☐ خاور ☐ نیسان ☐ وانت ☐ سایر</div></div>
-    <div class="col-3"><div class="field"><span class="label">پلاک وسیله / کشنده:</span></div></div>
-    <div class="col-3"><div class="field"><span class="label">نام راننده:</span></div></div>
-    <div class="col-4"><div class="field"><span class="label">شماره تماس راننده:</span></div></div>
+    <div class="col-6 col-md-3">
+      <div class="field">
+        <span class="label">نوع وسیله:</span>
+        <span class="opts" role="group" aria-label="نوع وسیله نقلیه">
+          <span class="opt">کامیون</span>
+          <span class="opt">تریلی</span>
+          <span class="opt">خاور</span>
+          <span class="opt">نیسان</span>
+          <span class="opt">وانت</span>
+          <span class="opt">سایر</span>
+        </span>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="field"><span class="label">پلاک وسیله / کشنده:</span></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="field"><span class="label">نام راننده:</span></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="field"><span class="label">شماره تماس راننده:</span></div>
+    </div>
   </div>
 
-  <div class="section">ج ـ اطلاعات کالا (در سامانه فعلاً هر حواله به یک ردیف کالا متصل است)</div>
-  <table>
-    <thead><tr>
-      <th style="width:5%">ردیف</th>
-      <th style="width:16%">ایندکس / کد کالا (مطابق فهرست موجودی)</th>
-      <th style="width:18%">شرح کالا</th>
-      <th style="width:22%">مشخصات ورق (گرید / ضخامت)</th>
-      <th style="width:11%">تعداد شیت/بسته</th>
-      <th style="width:13%">محل موجودی</th>
-      <th style="width:15%">وزن اسنادی (کیلوگرم)</th>
-    </tr></thead>
-    <tbody><tr><td class="text-center">۱</td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody>
-  </table>
-  <div class="small mt-1">کد کالا را عیناً از ایندکس رسمی بنویسید و محل موجودی، تعداد شیت و وزن اسنادی را جداگانه کنترل کنید. در کدهای چندمحلی، محل و مشخصات گروه باید دقیق باشد.</div>
+  <h2 class="section">ج ـ اطلاعات کالا (در سامانه فعلاً هر حواله به یک ردیف کالا متصل است)</h2>
+  <div class="table-wrap">
+    <table>
+      <caption class="visually-hidden">ردیف کالای حواله</caption>
+      <thead>
+        <tr>
+          <th scope="col" style="width:5%">ردیف</th>
+          <th scope="col" style="width:16%">ایندکس / کد کالا (مطابق فهرست موجودی)</th>
+          <th scope="col" style="width:18%">شرح کالا</th>
+          <th scope="col" style="width:22%">مشخصات ورق (گرید / ضخامت)</th>
+          <th scope="col" style="width:11%">تعداد شیت/بسته</th>
+          <th scope="col" style="width:13%">محل موجودی</th>
+          <th scope="col" style="width:15%">وزن اسنادی (کیلوگرم)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="text-center">۱</td>
+          <td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="small mt-1">
+    کد کالا را عیناً از ایندکس رسمی بنویسید و محل موجودی، تعداد شیت و وزن اسنادی را
+    جداگانه کنترل کنید. در کدهای چندمحلی، محل و مشخصات گروه باید دقیق باشد.
+  </div>
 
-  <div class="section">د ـ ورود و خروج از سایت فراسکو</div>
+  <h2 class="section">د ـ ورود و خروج از سایت فراسکو</h2>
   <div class="row g-2">
-    <div class="col-3"><div class="field"><span class="label">تاریخ ورود (شمسی):</span> سال / ماه / روز </div></div>
-    <div class="col-2"><div class="field"><span class="label">ساعت ورود:</span></div></div>
-    <div class="col-3"><div class="field"><span class="label">تاریخ خروج (شمسی):</span> سال / ماه / روز </div></div>
-    <div class="col-2"><div class="field"><span class="label">ساعت خروج:</span></div></div>
-    <div class="col-2"><div class="field"><span class="label">مدت توقف:</span> محاسبه سامانه</div></div>
+    <div class="col-6 col-md-3">
+      <div class="field">
+        <span class="label">تاریخ ورود (شمسی):</span>
+        <span class="date-ph">سال / ماه / روز</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="field"><span class="label">ساعت ورود:</span></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="field">
+        <span class="label">تاریخ خروج (شمسی):</span>
+        <span class="date-ph">سال / ماه / روز</span>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="field"><span class="label">ساعت خروج:</span></div>
+    </div>
+    <div class="col-12 col-md-2">
+      <div class="field"><span class="label">مدت توقف:</span> محاسبه سامانه</div>
+    </div>
   </div>
 
-  <div class="section">هـ ـ باسکول و مدارک</div>
+  <h2 class="section">هـ ـ باسکول و مدارک</h2>
   <div class="row g-2">
-    <div class="col-3"><div class="field"><span class="label">وزن پُر باسکول (کیلوگرم):</span></div></div>
-    <div class="col-3"><div class="field"><span class="label">وزن خالی باسکول (کیلوگرم):</span></div></div>
-    <div class="col-3"><div class="field"><span class="label">وزن خالص (پُر منهای خالی):</span></div></div>
-    <div class="col-3"><div class="field"><span class="label">اختلاف با وزن اسنادی:</span> محاسبه سامانه</div></div>
-    <div class="col-6"><div class="field"><span class="label">قبض وزن پُر پیوست شد؟</span> ☐ بله ☐ خیر &nbsp; <span class="label">شماره/شرح قبض:</span></div></div>
-    <div class="col-6"><div class="field"><span class="label">قبض وزن خالی پیوست شد؟</span> ☐ بله ☐ خیر &nbsp; <span class="label">شماره/شرح قبض:</span></div></div>
+    <div class="col-6 col-md-3">
+      <div class="field"><span class="label">وزن پُر باسکول (کیلوگرم):</span></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="field"><span class="label">وزن خالی باسکول (کیلوگرم):</span></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="field"><span class="label">وزن خالص (پُر منهای خالی):</span></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="field"><span class="label">اختلاف با وزن اسنادی:</span> محاسبه سامانه</div>
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="field">
+        <span class="label">قبض وزن پُر پیوست شد؟</span>
+        <span class="opts" role="group" aria-label="قبض وزن پر">
+          <span class="opt">بله</span><span class="opt">خیر</span>
+        </span>
+        <span class="label">شماره/شرح قبض:</span>
+      </div>
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="field">
+        <span class="label">قبض وزن خالی پیوست شد؟</span>
+        <span class="opts" role="group" aria-label="قبض وزن خالی">
+          <span class="opt">بله</span><span class="opt">خیر</span>
+        </span>
+        <span class="label">شماره/شرح قبض:</span>
+      </div>
+    </div>
   </div>
 
-  <div class="section">و ـ مغایرت و پیگیری</div>
+  <h2 class="section">و ـ مغایرت و پیگیری</h2>
   <div class="row g-2">
-    <div class="col-4"><div class="field"><span class="label">وضعیت مغایرت:</span> ☐ بدون مغایرت ☐ مغایرت مثبت ☐ مغایرت منفی ☐ نیازمند بررسی</div></div>
-    <div class="col-8"><div class="field"><span class="label">شرح مغایرت:</span></div></div>
-    <div class="col-4"><div class="field"><span class="label">مسئول پیگیری:</span></div></div>
-    <div class="col-4"><div class="field"><span class="label">تاریخ پیگیری (شمسی):</span> سال / ماه / روز </div></div>
-    <div class="col-4"><div class="field"><span class="label">نتیجه پیگیری:</span></div></div>
+    <div class="col-12 col-md-4">
+      <div class="field">
+        <span class="label">وضعیت مغایرت:</span>
+        <span class="opts" role="group" aria-label="وضعیت مغایرت">
+          <span class="opt">بدون مغایرت</span>
+          <span class="opt">مغایرت مثبت</span>
+          <span class="opt">مغایرت منفی</span>
+          <span class="opt">نیازمند بررسی</span>
+        </span>
+      </div>
+    </div>
+    <div class="col-12 col-md-8">
+      <div class="field"><span class="label">شرح مغایرت:</span></div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="field"><span class="label">مسئول پیگیری:</span></div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="field">
+        <span class="label">تاریخ پیگیری (شمسی):</span>
+        <span class="date-ph">سال / ماه / روز</span>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="field"><span class="label">نتیجه پیگیری:</span></div>
+    </div>
   </div>
 
-  <div class="section">ز ـ تأیید نهایی و توضیحات</div>
+  <h2 class="section">ز ـ تأیید نهایی و توضیحات</h2>
   <div class="row g-2">
-    <div class="col-4"><div class="field"><span class="label">نام تأییدکننده نهایی:</span></div></div>
-    <div class="col-3"><div class="field"><span class="label">تاریخ تأیید نهایی (شمسی):</span> سال / ماه / روز </div></div>
-    <div class="col-5"><div class="field"><span class="label">توضیحات:</span></div></div>
+    <div class="col-12 col-md-4">
+      <div class="field"><span class="label">نام تأییدکننده نهایی:</span></div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="field">
+        <span class="label">تاریخ تأیید نهایی (شمسی):</span>
+        <span class="date-ph">سال / ماه / روز</span>
+      </div>
+    </div>
+    <div class="col-12 col-md-5">
+      <div class="field"><span class="label">توضیحات:</span></div>
+    </div>
   </div>
+
   <div class="row g-2 mt-1">
-    <div class="col-3"><div class="sign"><strong>ثبت‌کننده / تنظیم‌کننده</strong><br>نام و امضا:</div></div>
-    <div class="col-3"><div class="sign"><strong>مسئول انبار</strong><br>نام و امضا:</div></div>
-    <div class="col-3"><div class="sign"><strong>حراست / کنترل خروج</strong><br>نام و امضا:</div></div>
-    <div class="col-3"><div class="sign"><strong>راننده (در صورت نیاز به تأیید)</strong><br>نام و امضا:</div></div>
+    <div class="col-6 col-md-3">
+      <div class="sign"><strong>ثبت‌کننده / تنظیم‌کننده</strong><br>نام و امضا:</div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="sign"><strong>مسئول انبار</strong><br>نام و امضا:</div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="sign"><strong>حراست / کنترل خروج</strong><br>نام و امضا:</div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="sign"><strong>راننده (در صورت نیاز)</strong><br>نام و امضا:</div>
+    </div>
   </div>
-  <div class="small mt-2">یادآوری: فایل قبض‌های باسکول پس از ورود اطلاعات باید در سامانه بارگذاری شود. تکمیل وضعیت «تکمیل‌شده» و کسر موجودی طبق مجوزها و کنترل‌های سامانه انجام می‌شود.</div>
+
+  <div class="small mt-2">
+    یادآوری: فایل قبض‌های باسکول پس از ورود اطلاعات باید در سامانه بارگذاری شود.
+    تکمیل وضعیت «تکمیل‌شده» و کسر موجودی طبق مجوزها و کنترل‌های سامانه انجام می‌شود.
+  </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    var btn = document.getElementById('btnPrint');
+    if (btn) btn.addEventListener('click', function () { window.print(); });
+  })();
+</script>
 {% endblock %}
