@@ -503,11 +503,13 @@ def create_app(test_config=None):
     @require_roles(ROLE_ADMIN)
     def users_list():
         users = User.query.order_by(User.username).all()
+        from models import ROLES
         return render_template("users.html", users=users, roles=ROLES)
 
     @app.route("/users/new", methods=["POST"])
     @require_roles(ROLE_ADMIN)
     def users_new():
+        from models import ROLES
         username = (request.form.get("username") or "").strip()[:80]
         password = request.form.get("password") or ""
         full_name = (request.form.get("full_name") or "").strip()[:120] or None
