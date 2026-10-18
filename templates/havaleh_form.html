@@ -41,7 +41,7 @@
     <div class="col-md-4">
       <label class="form-label">مشخصات ورق (گرید / ضخامت)</label>
       <input type="text" name="moshakhasat_varagh" class="form-control" list="mosh-list" value="{{ item.moshakhasat_varagh if item else '' }}">
-      <datalist id="mosh-list">{% for inv in inventory %}<option value="{{ inv.moshakhasat or inv.name_kala }} — کد {{ inv.code_kala }}">{% endfor %}</datalist>
+      <datalist id="mosh-list">{% for inv in inventory %}<option value="{{ inv.moshakhasat or inv.name_kala }}">{% endfor %}</datalist>
     </div>
     <div class="col-md-2">
       <label class="form-label">تعداد بسته</label>
