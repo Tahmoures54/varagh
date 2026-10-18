@@ -54,9 +54,25 @@
       <input type="number" name="tedad_baste" class="form-control" value="{{ item.tedad_baste if item else '' }}">
     </div>
     <div class="col-md-3">
-      <label class="form-label">کد کالا در ایندکس موجودی</label>
-      <input type="text" name="code_kala" class="form-control" list="code-list" value="{{ item.code_kala if item else '' }}">
-      <datalist id="code-list">{% for inv in inventory %}<option value="{{ inv.code_kala }}">{{ inv.name_kala or inv.moshakhasat or inv.code_kala }}</option>{% endfor %}</datalist>
+      <label class="form-label">انتخاب کالا از ایندکس موجودی</label>
+      {% set inventory_codes = inventory|map(attribute='code_kala')|list %}
+      {% set current_code = item.code_kala if item else '' %}
+      <select name="code_kala" id="code-kala-select" class="form-select">
+        <option value="">— انتخاب کالا —</option>
+        {% if current_code and current_code not in inventory_codes %}
+        <option value="{{ current_code }}" selected data-name="{{ item.sharh_kala or '' }}" data-spec="{{ item.moshakhasat_varagh or '' }}">کد قبلی: {{ current_code }} (در ایندکس فعلی موجود نیست)</option>
+        {% endif %}
+        {% for inv in inventory %}
+        <option value="{{ inv.code_kala }}"
+                data-name="{{ inv.name_kala or '' }}"
+                data-spec="{{ inv.moshakhasat or '' }}"
+                data-thickness="{{ inv.zekhamat if inv.zekhamat is not none else '' }}"
+                {% if item and item.code_kala == inv.code_kala and (not item.moshakhasat_varagh or item.moshakhasat_varagh == inv.moshakhasat or item.moshakhasat_varagh == inv.name_kala) %}selected{% endif %}>
+          {{ inv.code_kala }} — {{ inv.name_kala or inv.moshakhasat or 'بدون نام' }}{% if inv.zekhamat is not none %} — ضخامت {{ inv.zekhamat }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      <div class="form-text">با انتخاب کد، شرح کالا و مشخصات ورق از ایندکس پر می‌شود؛ در صورت نیاز می‌توانید آن‌ها را اصلاح کنید.</div>
     </div>
     <div class="col-md-3">
       <label class="form-label">وزن اسنادی (کیلوگرم)</label>
@@ -183,4 +199,19 @@
     <a href="{{ url_for("havaleh.havaleh_list") }}" class="btn btn-outline-secondary">انصراف</a>
   </div>
 </form>
+<script>
+(function () {
+  const selector = document.getElementById("code-kala-select");
+  const nameField = document.querySelector('[name="sharh_kala"]');
+  const specField = document.querySelector('[name="moshakhasat_varagh"]');
+  if (!selector || !nameField || !specField) return;
+  selector.addEventListener("change", function () {
+    const option = selector.options[selector.selectedIndex];
+    if (!option || !option.value) return;
+    if (option.dataset.name) nameField.value = option.dataset.name;
+    if (option.dataset.spec) specField.value = option.dataset.spec;
+    else if (option.dataset.thickness) specField.value = "ضخامت " + option.dataset.thickness;
+  });
+})();
+</script>
 {% endblock %}
