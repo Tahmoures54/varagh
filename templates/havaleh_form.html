@@ -2,232 +2,384 @@
 {% block title %}{% if item %}ویرایش حواله{% else %}ثبت حواله جدید{% endif %}{% endblock %}
 
 {% block content %}
+{% set date_pattern = "[0-9۰-۹٠-٩]{4}[/-][0-9۰-۹٠-٩]{1,2}[/-][0-9۰-۹٠-٩]{1,2}" %}
+
 <div class="page-heading">
   <div class="heading-group">
-    <span class="heading-icon"><i class="bi bi-{% if item %}pencil-square{% else %}plus-circle-fill{% endif %}"></i></span>
+    <span class="heading-icon" aria-hidden="true">
+      <i class="bi bi-{% if item %}pencil-square{% else %}plus-circle-fill{% endif %}"></i>
+    </span>
     <div>
       <h4>{% if item %}ویرایش حواله {{ item.shomare_havaleh }}{% else %}ثبت حواله جدید{% endif %}</h4>
       <p>تاریخ‌ها را به تقویم شمسی و به شکل سال/ماه/روز وارد کنید؛ نمونه: ۱۴۰۵/۰۷/۲۶. فیلدهای وزن و اسناد در کنترل نهایی استفاده می‌شوند.</p>
     </div>
   </div>
-  <a href="{{ url_for("havaleh.havaleh_list") }}" class="btn btn-outline-primary"><i class="bi bi-arrow-right ms-1"></i> بازگشت به حواله‌ها</a>
+  <a href="{{ url_for('havaleh.havaleh_list') }}" class="btn btn-outline-primary">
+    <i class="bi bi-arrow-right me-1" aria-hidden="true"></i> بازگشت به حواله‌ها
+  </a>
 </div>
 
-<form method="post" enctype="multipart/form-data" class="card p-3 p-lg-4">
+<form method="post" enctype="multipart/form-data" class="card p-3 p-lg-4" novalidate>
   <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-  <div class="section-title"><i class="bi bi-truck"></i> الف) اطلاعات حواله و وسیله نقلیه</div>
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <label class="form-label">شماره حواله</label>
-      <input type="text" class="form-control" dir="ltr"
-             value="{{ item.shomare_havaleh if item else '' }}"
-             placeholder="پس از ثبت، شماره به‌صورت خودکار صادر می‌شود" readonly aria-readonly="true">
-      {% if not item %}<div class="form-text">شماره یکتا هنگام ثبت حواله به‌صورت خودکار تولید می‌شود و نیازی به ورود دستی نیست.</div>{% endif %}
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">تاریخ حواله</label>
-      <input type="text" name="tarikh_havaleh" class="form-control"
-             value="{{ item.tarikh_havaleh|fa_date if item and item.tarikh_havaleh else '' }}" placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric" pattern="[0-9۰-۹٠-٩]{4}[/-][0-9۰-۹٠-٩]{1,2}[/-][0-9۰-۹٠-٩]{1,2}">
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">نوع وسیله نقلیه</label>
-      <select name="noe_vasileh" class="form-select">
-        <option value="">— انتخاب نوع وسیله —</option>
-        {% for v in ["کامیون", "تریلی", "خاور", "نیسان", "وانت", "سایر"] %}
-        <option value="{{ v }}" {% if item and item.noe_vasileh == v %}selected{% endif %}>{{ v }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">پلاک وسیله نقلیه / کشنده</label>
-      <input type="text" name="pelak" class="form-control" value="{{ item.pelak if item else '' }}">
-    </div>
-<div class="col-md-3">
-      <label class="form-label">نام راننده</label>
-      <input type="text" name="name_ranande" class="form-control" value="{{ item.name_ranande if item else '' }}">
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">شماره تماس راننده</label>
-      <input type="text" name="mobile_ranande" class="form-control" value="{{ item.mobile_ranande if item else '' }}">
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">شرح کالا</label>
-      <input type="text" name="sharh_kala" class="form-control" list="kala-list" value="{{ item.sharh_kala if item else '' }}">
-      <datalist id="kala-list">{% for inv in inventory %}<option value="{{ inv.name_kala }}">{% endfor %}</datalist>
-    </div>
-    <div class="col-md-4">
-      <label class="form-label">مشخصات ورق (گرید / ضخامت)</label>
-      <input type="text" name="moshakhasat_varagh" class="form-control" list="mosh-list" value="{{ item.moshakhasat_varagh if item else '' }}">
-      <datalist id="mosh-list">{% for inv in inventory %}<option value="{{ inv.moshakhasat or inv.name_kala }}">{% endfor %}</datalist>
-    </div>
-    <div class="col-md-2">
-      <label class="form-label">تعداد بسته</label>
-      <input type="number" name="tedad_baste" class="form-control" value="{{ item.tedad_baste if item else '' }}">
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">انتخاب کالا از ایندکس موجودی</label>
-      {% set inventory_codes = inventory|map(attribute='code_kala')|list %}
-      {% set current_code = item.code_kala if item else '' %}
-      <select name="code_kala" id="code-kala-select" class="form-select">
-        <option value="">— انتخاب کالا —</option>
-        {% if current_code and current_code not in inventory_codes %}
-        <option value="{{ current_code }}" selected data-name="{{ item.sharh_kala or '' }}" data-spec="{{ item.moshakhasat_varagh or '' }}">کد قبلی: {{ current_code }} (در ایندکس فعلی موجود نیست)</option>
+
+  {# ---------------- الف ---------------- #}
+  <fieldset class="border-0 p-0 m-0">
+    <legend class="section-title w-100"><i class="bi bi-truck" aria-hidden="true"></i> الف) اطلاعات حواله و وسیله نقلیه</legend>
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <label class="form-label" for="shomare_havaleh">شماره حواله</label>
+        <input type="text" id="shomare_havaleh" class="form-control text-start" dir="ltr"
+               value="{{ item.shomare_havaleh if item else '' }}"
+               placeholder="پس از ثبت، شماره به‌صورت خودکار صادر می‌شود"
+               readonly aria-readonly="true">
+        {% if not item %}
+        <div class="form-text">شماره یکتا هنگام ثبت حواله به‌صورت خودکار تولید می‌شود و نیازی به ورود دستی نیست.</div>
         {% endif %}
-        {% for inv in inventory %}
-        <option value="{{ inv.code_kala }}"
-                data-name="{{ inv.name_kala or '' }}"
-                data-spec="{{ inv.moshakhasat or '' }}"
-                data-location="{{ inv.mogheiyat or '' }}"
-                data-thickness="{{ inv.zekhamat if inv.zekhamat is not none else '' }}"
-                {% if item and item.code_kala == inv.code_kala and (not item.moshakhasat_varagh or item.moshakhasat_varagh == inv.moshakhasat or item.moshakhasat_varagh == inv.name_kala) %}selected{% endif %}>
-          {{ inv.code_kala }} — {{ inv.name_kala or inv.moshakhasat or 'بدون نام' }}{% if inv.zekhamat is not none %} — {{ inv.zekhamat }} میل{% endif %} — {{ inv.mogheiyat or 'محل نامشخص' }}
-        </option>
-        {% endfor %}
-      </select>
-      <input type="hidden" name="mogheiyat_varagh" id="mogheiyat-varagh" value="{{ item.mogheiyat_varagh if item else '' }}">
-      <div class="form-text">با انتخاب کالا، شرح، مشخصات و محل موجودی از ایندکس نمایش داده می‌شود.</div>
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">وزن اسنادی (کیلوگرم)</label>
-      <input type="number" step="0.01" name="vazn_esnadi" class="form-control" value="{{ item.vazn_esnadi if item else '' }}">
-    </div>
-  </div>
+      </div>
 
-  <div class="section-title"><i class="bi bi-clock-history"></i> ب) ورود و خروج از لیدان فراسکو</div>
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <label class="form-label">تاریخ ورود</label>
-      <input type="text" name="tarikh_vorud" class="form-control" value="{{ item.tarikh_vorud|fa_date if item and item.tarikh_vorud else '' }}" placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric">
-    </div>
-    <div class="col-md-2">
-      <label class="form-label">ساعت ورود</label>
-      <input type="time" name="saat_vorud" class="form-control" value="{{ item.saat_vorud.strftime('%H:%M') if item and item.saat_vorud else '' }}">
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">تاریخ خروج</label>
-      <input type="text" name="tarikh_khoruj" class="form-control" value="{{ item.tarikh_khoruj|fa_date if item and item.tarikh_khoruj else '' }}" placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric">
-    </div>
-    <div class="col-md-2">
-      <label class="form-label">ساعت خروج</label>
-      <input type="time" name="saat_khoruj" class="form-control" value="{{ item.saat_khoruj.strftime('%H:%M') if item and item.saat_khoruj else '' }}">
-    </div>
-    <div class="col-md-2">
-      <label class="form-label">مسئول ثبت</label>
-      <input type="text" name="masoul_sabt" class="form-control" value="{{ item.masoul_sabt if item else '' }}">
-    </div>
-    {% if item and item.moddat_tavaghof_saat is not none %}
-    <div class="col-md-3">
-      <label class="form-label">مدت توقف (محاسبه‌شده)</label>
-      <input type="text" class="form-control" readonly value="{{ item.moddat_tavaghof_saat }} ساعت">
-    </div>
-    {% endif %}
-  </div>
+      <div class="col-md-3">
+        <label class="form-label" for="tarikh_havaleh">تاریخ حواله</label>
+        <input type="text" id="tarikh_havaleh" name="tarikh_havaleh" class="form-control" dir="ltr"
+               value="{{ item.tarikh_havaleh|fa_date if item and item.tarikh_havaleh else '' }}"
+               placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric"
+               pattern="{{ date_pattern }}" required
+               aria-describedby="hint-tarikh">
+        <div id="hint-tarikh" class="form-text">قالب: سال/ماه/روز شمسی</div>
+      </div>
 
-  <div class="section-title"><i class="bi bi-speedometer"></i> ج) اطلاعات باسکول و پیوست مدارک</div>
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <label class="form-label">وزن پُر باسکول (کیلوگرم)</label>
-      <input type="number" step="0.01" name="vazn_por" class="form-control" value="{{ item.vazn_por if item else '' }}">
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">وزن خالی باسکول (کیلوگرم)</label>
-      <input type="number" step="0.01" name="vazn_khali" class="form-control" value="{{ item.vazn_khali if item else '' }}">
-    </div>
-    {% if item %}
-    <div class="col-md-2">
-      <label class="form-label">وزن خالص</label>
-      <input type="text" class="form-control" readonly value="{{ item.vazn_khales if item.vazn_khales is not none else '—' }}">
-    </div>
-    <div class="col-md-2">
-      <label class="form-label">اختلاف وزن</label>
-      <input type="text" class="form-control" readonly value="{{ item.ekhtelaf_vazn if item.ekhtelaf_vazn is not none else '—' }}">
-    </div>
-    <div class="col-md-2">
-      <label class="form-label">درصد اختلاف</label>
-      <input type="text" class="form-control" readonly value="{% if item.darsad_ekhtelaf is not none %}{{ item.darsad_ekhtelaf }} %{% else %}—{% endif %}">
-    </div>
-    {% endif %}
-    <div class="col-md-3">
-      <label class="form-label">فایل قبض وزن پُر (PDF/تصویر، حداکثر ۸MB)</label>
-      <input type="file" name="ghabz_por_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp">
-      {% if item and item.ghabz_por_file %}<a href="{{ url_for("reports.receipt_download", filename=item.ghabz_por_file) }}" target="_blank" rel="noopener">مشاهده قبض ثبت‌شده</a>{% endif %}
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">فایل قبض وزن خالی (PDF/تصویر، حداکثر ۸MB)</label>
-      <input type="file" name="ghabz_khali_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp">
-      {% if item and item.ghabz_khali_file %}<a href="{{ url_for("reports.receipt_download", filename=item.ghabz_khali_file) }}" target="_blank" rel="noopener">مشاهده قبض ثبت‌شده</a>{% endif %}
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">قبض وزن پُر پیوست شد؟</label>
-      <select name="ghabz_por_piost" class="form-select">{% for v in bale_kheyr %}<option value="{{ v }}" {% if item and item.ghabz_por_piost == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">قبض وزن خالی پیوست شد؟</label>
-      <select name="ghabz_khali_piost" class="form-select">{% for v in bale_kheyr %}<option value="{{ v }}" {% if item and item.ghabz_khali_piost == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
-    </div>
-  </div>
+      <div class="col-md-3">
+        <label class="form-label" for="noe_vasileh">نوع وسیله نقلیه</label>
+        <select id="noe_vasileh" name="noe_vasileh" class="form-select">
+          <option value="">— انتخاب نوع وسیله —</option>
+          {% for v in ["کامیون", "تریلی", "خاور", "نیسان", "وانت", "سایر"] %}
+          <option value="{{ v }}" {% if item and item.noe_vasileh == v %}selected{% endif %}>{{ v }}</option>
+          {% endfor %}
+        </select>
+      </div>
 
-  <div class="section-title"><i class="bi bi-clipboard2-check"></i> د) وضعیت کنترل و پیگیری</div>
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <label class="form-label">وضعیت حواله</label>
-      <select name="vaziyat_havaleh" class="form-select">{% for s in statuses %}<option value="{{ s }}" {% if item and item.vaziyat_havaleh == s %}selected{% elif not item and s == 'ثبت‌شده' %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+      <div class="col-md-3">
+        <label class="form-label" for="pelak">پلاک وسیله نقلیه / کشنده</label>
+        <input type="text" id="pelak" name="pelak" class="form-control" dir="ltr"
+               value="{{ item.pelak if item else '' }}" autocomplete="off" spellcheck="false">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label" for="name_ranande">نام راننده</label>
+        <input type="text" id="name_ranande" name="name_ranande" class="form-control"
+               value="{{ item.name_ranande if item else '' }}" autocomplete="name">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label" for="mobile_ranande">شماره تماس راننده</label>
+        <input type="tel" id="mobile_ranande" name="mobile_ranande" class="form-control" dir="ltr"
+               value="{{ item.mobile_ranande if item else '' }}" autocomplete="tel"
+               inputmode="tel" pattern="[0-9۰-۹٠-٩+\-\s]{7,20}">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label" for="sharh_kala">شرح کالا</label>
+        <input type="text" id="sharh_kala" name="sharh_kala" class="form-control"
+               list="kala-list" value="{{ item.sharh_kala if item else '' }}" autocomplete="off">
+        <datalist id="kala-list">
+          {% for inv in inventory %}<option value="{{ inv.name_kala }}">{{ inv.name_kala }}</option>{% endfor %}
+        </datalist>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label" for="moshakhasat_varagh">مشخصات ورق (گرید / ضخامت)</label>
+        <input type="text" id="moshakhasat_varagh" name="moshakhasat_varagh" class="form-control"
+               list="mosh-list" value="{{ item.moshakhasat_varagh if item else '' }}" autocomplete="off">
+        <datalist id="mosh-list">
+          {% for inv in inventory %}
+          <option value="{{ inv.moshakhasat or inv.name_kala }}">{{ inv.moshakhasat or inv.name_kala }}</option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label" for="tedad_baste">تعداد بسته</label>
+        <input type="number" id="tedad_baste" name="tedad_baste" class="form-control"
+               value="{{ item.tedad_baste if item else '' }}" min="0" step="1" inputmode="numeric">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label" for="code-kala-select">انتخاب کالا از ایندکس موجودی</label>
+        {% set inventory_codes = inventory|map(attribute='code_kala')|list %}
+        {% set current_code = item.code_kala if item else '' %}
+        <select id="code-kala-select" name="code_kala" class="form-select" autocomplete="off"
+                aria-describedby="hint-code">
+          <option value="">— انتخاب کالا —</option>
+          {% if current_code and current_code not in inventory_codes %}
+          <option value="{{ current_code }}" selected
+                  data-name="{{ item.sharh_kala or '' }}"
+                  data-spec="{{ item.moshakhasat_varagh or '' }}"
+                  data-location="{{ item.mogheiyat_varagh or '' }}">
+            کد قبلی: {{ current_code }} (در ایندکس فعلی موجود نیست)
+          </option>
+          {% endif %}
+          {% for inv in inventory %}
+          <option value="{{ inv.code_kala }}"
+                  data-name="{{ inv.name_kala or '' }}"
+                  data-spec="{{ inv.moshakhasat or '' }}"
+                  data-location="{{ inv.mogheiyat or '' }}"
+                  data-thickness="{{ inv.zekhamat if inv.zekhamat is not none else '' }}"
+                  {% if item and item.code_kala == inv.code_kala %}selected{% endif %}>
+            {{ inv.code_kala }} — {{ inv.name_kala or inv.moshakhasat or 'بدون نام' }}
+            {%- if inv.zekhamat is not none %} — {{ inv.zekhamat }} میل{% endif %}
+            — {{ inv.mogheiyat or 'محل نامشخص' }}
+          </option>
+          {% endfor %}
+        </select>
+        <input type="hidden" name="mogheiyat_varagh" id="mogheiyat-varagh"
+               value="{{ item.mogheiyat_varagh if item else '' }}">
+        <div id="hint-code" class="form-text">با انتخاب کالا، شرح، مشخصات و محل موجودی از ایندکس نمایش داده می‌شود.</div>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label" for="vazn_esnadi">وزن اسنادی (کیلوگرم)</label>
+        <input type="number" id="vazn_esnadi" name="vazn_esnadi" class="form-control"
+               value="{{ item.vazn_esnadi if item else '' }}"
+               min="0" step="0.01" inputmode="decimal">
+      </div>
     </div>
-    <div class="col-md-3">
-      <label class="form-label">وضعیت مغایرت</label>
-      <select name="vaziyat_moghayerat" class="form-select">{% for s in moghayerat_list %}<option value="{{ s }}" {% if item and item.vaziyat_moghayerat == s %}selected{% elif not item and s == 'بدون مغایرت' %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+  </fieldset>
+
+  {# ---------------- ب ---------------- #}
+  <fieldset class="border-0 p-0 m-0">
+    <legend class="section-title w-100"><i class="bi bi-clock-history" aria-hidden="true"></i> ب) ورود و خروج از لیدان فراسکو</legend>
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <label class="form-label" for="tarikh_vorud">تاریخ ورود</label>
+        <input type="text" id="tarikh_vorud" name="tarikh_vorud" class="form-control" dir="ltr"
+               value="{{ item.tarikh_vorud|fa_date if item and item.tarikh_vorud else '' }}"
+               placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric" pattern="{{ date_pattern }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="saat_vorud">ساعت ورود</label>
+        <input type="time" id="saat_vorud" name="saat_vorud" class="form-control" dir="ltr"
+               value="{{ item.saat_vorud.strftime('%H:%M') if item and item.saat_vorud else '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="tarikh_khoruj">تاریخ خروج</label>
+        <input type="text" id="tarikh_khoruj" name="tarikh_khoruj" class="form-control" dir="ltr"
+               value="{{ item.tarikh_khoruj|fa_date if item and item.tarikh_khoruj else '' }}"
+               placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric" pattern="{{ date_pattern }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="saat_khoruj">ساعت خروج</label>
+        <input type="time" id="saat_khoruj" name="saat_khoruj" class="form-control" dir="ltr"
+               value="{{ item.saat_khoruj.strftime('%H:%M') if item and item.saat_khoruj else '' }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="masoul_sabt">مسئول ثبت</label>
+        <input type="text" id="masoul_sabt" name="masoul_sabt" class="form-control"
+               value="{{ item.masoul_sabt if item else '' }}" required autocomplete="name">
+      </div>
+      {% if item and item.moddat_tavaghof_saat is not none %}
+      <div class="col-md-3">
+        <label class="form-label" for="moddat_tavaghof">مدت توقف (محاسبه‌شده)</label>
+        <input type="text" id="moddat_tavaghof" class="form-control" readonly
+               value="{{ item.moddat_tavaghof_saat }} ساعت">
+      </div>
+      {% endif %}
     </div>
-    <div class="col-md-6">
-      <label class="form-label">شرح مغایرت</label>
-      <input type="text" name="sharh_moghayerat" class="form-control" value="{{ item.sharh_moghayerat if item else '' }}">
+  </fieldset>
+
+  {# ---------------- ج ---------------- #}
+  <fieldset class="border-0 p-0 m-0">
+    <legend class="section-title w-100"><i class="bi bi-speedometer" aria-hidden="true"></i> ج) اطلاعات باسکول و پیوست مدارک</legend>
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <label class="form-label" for="vazn_por">وزن پُر باسکول (کیلوگرم)</label>
+        <input type="number" id="vazn_por" name="vazn_por" class="form-control"
+               value="{{ item.vazn_por if item else '' }}" min="0" step="0.01" inputmode="decimal">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="vazn_khali">وزن خالی باسکول (کیلوگرم)</label>
+        <input type="number" id="vazn_khali" name="vazn_khali" class="form-control"
+               value="{{ item.vazn_khali if item else '' }}" min="0" step="0.01" inputmode="decimal">
+      </div>
+      {% if item %}
+      <div class="col-md-2">
+        <label class="form-label" for="vazn_khales">وزن خالص</label>
+        <input type="text" id="vazn_khales" class="form-control" readonly
+               value="{{ item.vazn_khales if item.vazn_khales is not none else '—' }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="ekhtelaf_vazn">اختلاف وزن</label>
+        <input type="text" id="ekhtelaf_vazn" class="form-control" readonly
+               value="{{ item.ekhtelaf_vazn if item.ekhtelaf_vazn is not none else '—' }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label" for="darsad_ekhtelaf">درصد اختلاف</label>
+        <input type="text" id="darsad_ekhtelaf" class="form-control" readonly
+               value="{% if item.darsad_ekhtelaf is not none %}{{ item.darsad_ekhtelaf }} %{% else %}—{% endif %}">
+      </div>
+      {% endif %}
+
+      <div class="col-md-3">
+        <label class="form-label" for="ghabz_por_file">فایل قبض وزن پُر (PDF/تصویر، حداکثر ۸MB)</label>
+        <input type="file" id="ghabz_por_file" name="ghabz_por_file" class="form-control"
+               accept=".pdf,.png,.jpg,.jpeg,.webp" data-max-size="8388608"
+               aria-describedby="hint-ghabz-por">
+        <div id="hint-ghabz-por" class="form-text">فرمت‌های مجاز: PDF / PNG / JPG / JPEG / WEBP — حداکثر ۸ مگابایت</div>
+        {% if item and item.ghabz_por_file %}
+        <a href="{{ url_for('reports.receipt_download', filename=item.ghabz_por_file) }}"
+           target="_blank" rel="noopener" class="small">مشاهده قبض ثبت‌شده</a>
+        {% endif %}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="ghabz_khali_file">فایل قبض وزن خالی (PDF/تصویر، حداکثر ۸MB)</label>
+        <input type="file" id="ghabz_khali_file" name="ghabz_khali_file" class="form-control"
+               accept=".pdf,.png,.jpg,.jpeg,.webp" data-max-size="8388608"
+               aria-describedby="hint-ghabz-khali">
+        <div id="hint-ghabz-khali" class="form-text">فرمت‌های مجاز: PDF / PNG / JPG / JPEG / WEBP — حداکثر ۸ مگابایت</div>
+        {% if item and item.ghabz_khali_file %}
+        <a href="{{ url_for('reports.receipt_download', filename=item.ghabz_khali_file) }}"
+           target="_blank" rel="noopener" class="small">مشاهده قبض ثبت‌شده</a>
+        {% endif %}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="ghabz_por_piost">قبض وزن پُر پیوست شد؟</label>
+        <select id="ghabz_por_piost" name="ghabz_por_piost" class="form-select">
+          {% for v in bale_kheyr %}
+          <option value="{{ v }}" {% if item and item.ghabz_por_piost == v %}selected{% endif %}>{{ v }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="ghabz_khali_piost">قبض وزن خالی پیوست شد؟</label>
+        <select id="ghabz_khali_piost" name="ghabz_khali_piost" class="form-select">
+          {% for v in bale_kheyr %}
+          <option value="{{ v }}" {% if item and item.ghabz_khali_piost == v %}selected{% endif %}>{{ v }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
-    <div class="col-md-3">
-      <label class="form-label">مسئول پیگیری</label>
-      <input type="text" name="masoul_peygiri" class="form-control" value="{{ item.masoul_peygiri if item else '' }}">
+  </fieldset>
+
+  {# ---------------- د ---------------- #}
+  <fieldset class="border-0 p-0 m-0">
+    <legend class="section-title w-100"><i class="bi bi-clipboard2-check" aria-hidden="true"></i> د) وضعیت کنترل و پیگیری</legend>
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <label class="form-label" for="vaziyat_havaleh">وضعیت حواله</label>
+        <select id="vaziyat_havaleh" name="vaziyat_havaleh" class="form-select" required>
+          {% for s in statuses %}
+          <option value="{{ s }}"
+                  {% if item and item.vaziyat_havaleh == s %}selected{% elif not item and s == 'ثبت‌شده' %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="vaziyat_moghayerat">وضعیت مغایرت</label>
+        <select id="vaziyat_moghayerat" name="vaziyat_moghayerat" class="form-select">
+          {% for s in moghayerat_list %}
+          <option value="{{ s }}"
+                  {% if item and item.vaziyat_moghayerat == s %}selected{% elif not item and s == 'بدون مغایرت' %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="sharh_moghayerat">شرح مغایرت</label>
+        <input type="text" id="sharh_moghayerat" name="sharh_moghayerat" class="form-control"
+               value="{{ item.sharh_moghayerat if item else '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="masoul_peygiri">مسئول پیگیری</label>
+        <input type="text" id="masoul_peygiri" name="masoul_peygiri" class="form-control"
+               value="{{ item.masoul_peygiri if item else '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="tarikh_peygiri">تاریخ پیگیری</label>
+        <input type="text" id="tarikh_peygiri" name="tarikh_peygiri" class="form-control" dir="ltr"
+               value="{{ item.tarikh_peygiri|fa_date if item and item.tarikh_peygiri else '' }}"
+               placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric" pattern="{{ date_pattern }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="natije_peygiri">نتیجه پیگیری</label>
+        <input type="text" id="natije_peygiri" name="natije_peygiri" class="form-control"
+               value="{{ item.natije_peygiri if item else '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="taeed_nahayi">تأیید نهایی</label>
+        <input type="text" id="taeed_nahayi" name="taeed_nahayi" class="form-control"
+               value="{{ item.taeed_nahayi if item else '' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" for="tarikh_taeed">تاریخ تأیید نهایی</label>
+        <input type="text" id="tarikh_taeed" name="tarikh_taeed" class="form-control" dir="ltr"
+               value="{{ item.tarikh_taeed|fa_date if item and item.tarikh_taeed else '' }}"
+               placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric" pattern="{{ date_pattern }}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="tozihat">توضیحات</label>
+        <textarea id="tozihat" name="tozihat" class="form-control" rows="2">{{ item.tozihat if item else '' }}</textarea>
+      </div>
     </div>
-    <div class="col-md-3">
-      <label class="form-label">تاریخ پیگیری</label>
-      <input type="text" name="tarikh_peygiri" class="form-control" value="{{ item.tarikh_peygiri|fa_date if item and item.tarikh_peygiri else '' }}" placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric">
-    </div>
-    <div class="col-md-6">
-      <label class="form-label">نتیجه پیگیری</label>
-      <input type="text" name="natije_peygiri" class="form-control" value="{{ item.natije_peygiri if item else '' }}">
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">تأیید نهایی</label>
-      <input type="text" name="taeed_nahayi" class="form-control" value="{{ item.taeed_nahayi if item else '' }}">
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">تاریخ تأیید نهایی</label>
-      <input type="text" name="tarikh_taeed" class="form-control" value="{{ item.tarikh_taeed|fa_date if item and item.tarikh_taeed else '' }}" placeholder="۱۴۰۵/۰۷/۲۶" inputmode="numeric">
-    </div>
-    <div class="col-md-6">
-      <label class="form-label">توضیحات</label>
-      <textarea name="tozihat" class="form-control" rows="2">{{ item.tozihat if item else '' }}</textarea>
-    </div>
-  </div>
+  </fieldset>
 
   <div class="d-flex gap-2">
-    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-lg"></i> ذخیره</button>
-    <a href="{{ url_for("havaleh.havaleh_list") }}" class="btn btn-outline-secondary">انصراف</a>
+    <button type="submit" class="btn btn-primary px-4">
+      <i class="bi bi-check-lg me-1" aria-hidden="true"></i> ذخیره
+    </button>
+    <a href="{{ url_for('havaleh.havaleh_list') }}" class="btn btn-outline-secondary">انصراف</a>
   </div>
 </form>
+{% endblock %}
+
+{% block extra_js %}
 <script>
 (function () {
-  const selector = document.getElementById("code-kala-select");
-  const nameField = document.querySelector('[name="sharh_kala"]');
-  const specField = document.querySelector('[name="moshakhasat_varagh"]');
-  const locationField = document.getElementById("mogheiyat-varagh");
-  if (!selector || !nameField || !specField) return;
-  const selected = selector.options[selector.selectedIndex];
-  if (selected && locationField && selected.value) locationField.value = selected.dataset.location || "";
-  selector.addEventListener("change", function () {
-    const option = selector.options[selector.selectedIndex];
-    if (!option || !option.value) return;
-    if (option.dataset.name) nameField.value = option.dataset.name;
-    if (option.dataset.spec) specField.value = option.dataset.spec;
-    else if (option.dataset.thickness) specField.value = "ضخامت " + option.dataset.thickness;
-    if (locationField) locationField.value = option.dataset.location || "";
+  "use strict";
+
+  var MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
+
+  /* ---------- سینک کد کالا → شرح/مشخصات/محل ---------- */
+  var selector      = document.getElementById("code-kala-select");
+  var nameField     = document.querySelector('[name="sharh_kala"]');
+  var specField     = document.querySelector('[name="moshakhasat_varagh"]');
+  var locationField = document.getElementById("mogheiyat-varagh");
+  var thicknessFieldNote = document.querySelector('[name="moshakhasat_varagh"]'); // همان spec
+
+  if (selector && nameField && specField) {
+    selector.addEventListener("change", function () {
+      var option = selector.options[selector.selectedIndex];
+
+      // انتخاب گزینهٔ خالی → پاک‌سازی
+      if (!option || !option.value) {
+        nameField.value = "";
+        specField.value = "";
+        if (locationField) locationField.value = "";
+        return;
+      }
+
+      if (option.dataset.name) nameField.value = option.dataset.name;
+
+      if (option.dataset.spec) {
+        specField.value = option.dataset.spec;
+      } else if (option.dataset.thickness) {
+        specField.value = "ضخامت " + option.dataset.thickness;
+      } else {
+        specField.value = "";
+      }
+
+      if (locationField) locationField.value = option.dataset.location || "";
+    });
+  }
+
+  /* ---------- اعتبارسنجی اندازهٔ فایل‌ها ---------- */
+  document.querySelectorAll('input[type="file"][data-max-size]').forEach(function (input) {
+    input.addEventListener("change", function () {
+      var limit = parseInt(input.dataset.maxSize, 10) || MAX_FILE_SIZE;
+      var file  = input.files && input.files[0];
+      if (!file) return;
+      if (file.size > limit) {
+        alert("حجم فایل «" + file.name + "» بیش از " + Math.round(limit / (1024 * 1024)) + " مگابایت است.");
+        input.value = "";
+        input.focus();
+      }
+    });
   });
 })();
 </script>
