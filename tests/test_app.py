@@ -131,3 +131,47 @@ def test_completion_deducts_stock_once(client, app):
         item = Havaleh.query.one()
         assert inventory.mojudi_vaghei == 800
         assert item.inventory_deducted is True
+
+
+def test_admin_can_create_user(client, app):
+    login(client)
+    token = csrf(client, "/users")
+    response = client.post("/users", data={
+        "_csrf_token": token,
+        "username": "warehouse_1",
+        "full_name": "کاربر انبار",
+        "password": "a-very-strong-password",
+        "role": "anbar",
+    })
+    assert response.status_code == 302
+    with app.app_context():
+        user = User.query.filter_by(username="warehouse_1").one()
+        assert user.role == "anbar"
+        assert user.check_password("a-very-strong-password")
+
+
+def test_warehouse_cannot_complete_voucher(client, app):
+    with app.app_context():
+        warehouse = User(username="warehouse", full_name="Warehouse", role="anbar", is_active_user=True)
+        warehouse.set_password("strong-test-password")
+        db.session.add(warehouse)
+        db.session.add(Inventory(code_kala="ST-2", name_kala="ورق", mojudi_vaghei=1000))
+        db.session.commit()
+    login(client, "warehouse")
+    token = csrf(client, "/havaleh/new")
+    response = client.post("/havaleh/new", data={
+        "_csrf_token": token,
+        "shomare_havaleh": "TEST-3",
+        "code_kala": "ST-2",
+        "vazn_esnadi": "200",
+        "vazn_por": "250",
+        "vazn_khali": "50",
+        "vaziyat_havaleh": "تکمیل‌شده",
+        "vaziyat_moghayerat": "بدون مغایرت",
+        "ghabz_por_piost": "خیر",
+        "ghabz_khali_piost": "خیر",
+    })
+    assert response.status_code == 200
+    with app.app_context():
+        assert Havaleh.query.count() == 0
+        assert Inventory.query.one().mojudi_vaghei == 1000
