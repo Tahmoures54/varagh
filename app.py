@@ -241,12 +241,12 @@ def create_app(test_config=None):
         item.tarikh_havaleh = parse_date("tarikh_havaleh")
         item.pelak = (request.form.get("pelak") or "").strip()[:20] or None
         item.noe_vasileh = (request.form.get("noe_vasileh") or "").strip()[:30] or None
-        item.pelak_trailer = (request.form.get("pelak_trailer") or "").strip()[:20] or None
         item.name_ranande = (request.form.get("name_ranande") or "").strip()[:100] or None
         item.mobile_ranande = (request.form.get("mobile_ranande") or "").strip()[:20] or None
         item.sharh_kala = (request.form.get("sharh_kala") or "").strip()[:100] or None
         item.moshakhasat_varagh = (request.form.get("moshakhasat_varagh") or "").strip()[:200] or None
         item.code_kala = (request.form.get("code_kala") or "").strip()[:30] or None
+        item.mogheiyat_varagh = (request.form.get("mogheiyat_varagh") or "").strip()[:200] or None
         item.tedad_baste = parse_int("tedad_baste", "تعداد بسته")
         item.vazn_esnadi = parse_float("vazn_esnadi", "وزن اسنادی")
         item.tarikh_vorud = parse_date("tarikh_vorud")
@@ -288,6 +288,8 @@ def create_app(test_config=None):
             candidates = Inventory.query.filter_by(code_kala=item.code_kala).order_by(Inventory.id).all()
             if not candidates:
                 raise ValueError("کد کالا در ایندکس موجودی پیدا نشد؛ ابتدا موجودی را بررسی کنید.")
+            if item.mogheiyat_varagh:
+                candidates = [row for row in candidates if (row.mogheiyat or "").strip() == item.mogheiyat_varagh]
             if len(candidates) > 1:
                 specification = (item.moshakhasat_varagh or "").strip()
                 matches = [row for row in candidates if specification and specification in {
@@ -296,8 +298,10 @@ def create_app(test_config=None):
                 if len(matches) != 1:
                     raise ValueError("این کد کالا چند ردیف موجودی دارد؛ مشخصات ورق را دقیقاً مطابق ایندکس انتخاب کنید تا موجودی اشتباه کسر نشود.")
                 inventory = matches[0]
-            else:
+            elif len(candidates) == 1:
                 inventory = candidates[0]
+            else:
+                raise ValueError("محل انتخاب‌شده برای این کد کالا در ایندکس موجودی پیدا نشد.")
             if inventory.mojudi_vaghei is None or inventory.mojudi_vaghei < item.vazn_khales:
                 raise ValueError("موجودی کافی نیست یا موجودی واقعی تعریف نشده است؛ کسر انجام نشد.")
             inventory.mojudi_vaghei = round(inventory.mojudi_vaghei - item.vazn_khales, 3)
@@ -386,7 +390,7 @@ def create_app(test_config=None):
             like = f"%{q}%"
             query = query.filter(or_(
                 Havaleh.shomare_havaleh.ilike(like), Havaleh.pelak.ilike(like),
-                Havaleh.name_ranande.ilike(like), Havaleh.noe_vasileh.ilike(like), Havaleh.pelak_trailer.ilike(like), Havaleh.sharh_kala.ilike(like),
+                Havaleh.name_ranande.ilike(like), Havaleh.noe_vasileh.ilike(like), Havaleh.sharh_kala.ilike(like),
                 Havaleh.code_kala.ilike(like), Havaleh.moshakhasat_varagh.ilike(like),
             ))
         if status in STATUSES:
@@ -678,13 +682,13 @@ def create_app(test_config=None):
         wb = Workbook()
         ws = wb.active
         ws.title = "حواله‌ها"
-        headers = ["شماره حواله", "تاریخ حواله", "نوع وسیله", "پلاک کشنده", "پلاک تریلر", "نام راننده", "شماره تماس راننده", "شرح کالا", "مشخصات ورق", "کد کالا", "تعداد بسته", "وزن اسنادی", "وزن پر", "وزن خالی", "وزن خالص", "اختلاف وزن", "تاریخ ورود", "ساعت ورود", "تاریخ خروج", "ساعت خروج", "وضعیت", "مغایرت", "قبض پر", "قبض خالی", "توضیحات"]
+        headers = ["شماره حواله", "تاریخ حواله", "نوع وسیله", "پلاک کشنده", "نام راننده", "شماره تماس راننده", "شرح کالا", "مشخصات ورق", "کد کالا", "محل موجودی", "تعداد بسته", "وزن اسنادی", "وزن پر", "وزن خالی", "وزن خالص", "اختلاف وزن", "تاریخ ورود", "ساعت ورود", "تاریخ خروج", "ساعت خروج", "وضعیت", "مغایرت", "قبض پر", "قبض خالی", "توضیحات"]
         ws.append(headers)
         for cell in ws[1]:
             cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = PatternFill("solid", fgColor="1F4E79")
         for h in Havaleh.query.order_by(Havaleh.created_at.desc()).all():
-            ws.append([h.shomare_havaleh, h.tarikh_havaleh.isoformat() if h.tarikh_havaleh else "", h.noe_vasileh, h.pelak, h.pelak_trailer, h.name_ranande, h.mobile_ranande, h.sharh_kala, h.moshakhasat_varagh, h.code_kala, h.tedad_baste, h.vazn_esnadi, h.vazn_por, h.vazn_khali, h.vazn_khales, h.ekhtelaf_vazn, h.tarikh_vorud.isoformat() if h.tarikh_vorud else "", h.saat_vorud.strftime("%H:%M") if h.saat_vorud else "", h.tarikh_khoruj.isoformat() if h.tarikh_khoruj else "", h.saat_khoruj.strftime("%H:%M") if h.saat_khoruj else "", h.vaziyat_havaleh, h.vaziyat_moghayerat, h.ghabz_por_piost, h.ghabz_khali_piost, h.tozihat])
+            ws.append([h.shomare_havaleh, h.tarikh_havaleh.isoformat() if h.tarikh_havaleh else "", h.noe_vasileh, h.pelak, h.name_ranande, h.mobile_ranande, h.sharh_kala, h.moshakhasat_varagh, h.code_kala, h.mogheiyat_varagh, h.tedad_baste, h.vazn_esnadi, h.vazn_por, h.vazn_khali, h.vazn_khales, h.ekhtelaf_vazn, h.tarikh_vorud.isoformat() if h.tarikh_vorud else "", h.saat_vorud.strftime("%H:%M") if h.saat_vorud else "", h.tarikh_khoruj.isoformat() if h.tarikh_khoruj else "", h.saat_khoruj.strftime("%H:%M") if h.saat_khoruj else "", h.vaziyat_havaleh, h.vaziyat_moghayerat, h.ghabz_por_piost, h.ghabz_khali_piost, h.tozihat])
         ws.freeze_panes = "A2"
         ws.auto_filter.ref = ws.dimensions
         for col in ws.columns:
@@ -826,10 +830,38 @@ def create_app(test_config=None):
         # Backward-compatible additive migration for vehicle details on existing databases.
         # Only fixed, developer-defined identifiers are used in this DDL.
         existing_columns = {column["name"] for column in sqlalchemy_inspect(db.engine).get_columns("havaleh")}
-        for column_name in ("noe_vasileh", "pelak_trailer"):
+        for column_name in ("noe_vasileh", "pelak_trailer", "mogheiyat_varagh"):
             if column_name not in existing_columns:
-                db.session.execute(text(f"ALTER TABLE havaleh ADD COLUMN {column_name} VARCHAR(30)"))
+                column_type = "VARCHAR(200)" if column_name == "mogheiyat_varagh" else "VARCHAR(30)"
+                db.session.execute(text(f"ALTER TABLE havaleh ADD COLUMN {column_name} {column_type}"))
         db.session.commit()
+        # Import the supplied initial inventory idempotently without overwriting staff-maintained records.
+        seed_path = BASE_DIR / "data" / "initial_inventory.csv"
+        if seed_path.is_file():
+            with seed_path.open("r", encoding="utf-8-sig", newline="") as seed_file:
+                for record in csv.DictReader(seed_file):
+                    code = (record.get("code_kala") or "").strip()
+                    spec = (record.get("moshakhasat") or "").strip() or None
+                    location = (record.get("mogheiyat") or "").strip() or None
+                    if not code or Inventory.query.filter_by(code_kala=code, moshakhasat=spec, mogheiyat=location).first():
+                        continue
+                    def seed_num(key):
+                        raw = (record.get(key) or "").strip().replace(",", "")
+                        return float(raw) if raw else None
+                    db.session.add(Inventory(
+                        radif=int(seed_num("radif") or 0) or None,
+                        code_kala=code[:30],
+                        name_kala=(record.get("name_kala") or "").strip()[:100] or None,
+                        zekhamat=seed_num("zekhamat"),
+                        moshakhasat=spec,
+                        vahed=(record.get("vahed") or "کیلو گرم").strip()[:20],
+                        mojudi_vaghei=seed_num("mojudi_vaghei"),
+                        tedad_sheet=seed_num("tedad_sheet"),
+                        vazn_har_sheet=seed_num("vazn_har_sheet"),
+                        vazn_goruh=seed_num("vazn_goruh"),
+                        mogheiyat=location,
+                    ))
+            db.session.commit()
         # Admin phone and password are configured only through Vercel environment variables.
         # The one-time rename migrates the existing admin account without deleting app data.
         admin_phone = (os.environ.get("VARAGH_ADMIN_PHONE") or "").strip()
