@@ -10,7 +10,7 @@
       <p>اطلاعات را با دقت ثبت کنید؛ فیلدهای وزن و اسناد در کنترل نهایی استفاده می‌شوند.</p>
     </div>
   </div>
-  <a href="{{ url_for("havaleh.havaleh_list) }}" class="btn btn-outline-primary"><i class="bi bi-arrow-right ms-1"></i> بازگشت به حواله‌ها</a>
+  <a href="{{ url_for("havaleh.havaleh_list") }}" class="btn btn-outline-primary"><i class="bi bi-arrow-right ms-1"></i> بازگشت به حواله‌ها</a>
 </div>
 
 <form method="post" enctype="multipart/form-data" class="card p-3 p-lg-4">
@@ -121,12 +121,12 @@
     <div class="col-md-3">
       <label class="form-label">فایل قبض وزن پُر (PDF/تصویر، حداکثر ۸MB)</label>
       <input type="file" name="ghabz_por_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp">
-      {% if item and item.ghabz_por_file %}<a href="{{ url_for("reports.receipt_download, filename=item.ghabz_por_file) }}" target="_blank" rel="noopener">مشاهده قبض ثبت‌شده</a>{% endif %}
+      {% if item and item.ghabz_por_file %}<a href="{{ url_for("reports.receipt_download", filename=item.ghabz_por_file) }}" target="_blank" rel="noopener">مشاهده قبض ثبت‌شده</a>{% endif %}
     </div>
     <div class="col-md-3">
       <label class="form-label">فایل قبض وزن خالی (PDF/تصویر، حداکثر ۸MB)</label>
       <input type="file" name="ghabz_khali_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp">
-      {% if item and item.ghabz_khali_file %}<a href="{{ url_for("reports.receipt_download, filename=item.ghabz_khali_file) }}" target="_blank" rel="noopener">مشاهده قبض ثبت‌شده</a>{% endif %}
+      {% if item and item.ghabz_khali_file %}<a href="{{ url_for("reports.receipt_download", filename=item.ghabz_khali_file) }}" target="_blank" rel="noopener">مشاهده قبض ثبت‌شده</a>{% endif %}
     </div>
     <div class="col-md-3">
       <label class="form-label">قبض وزن پُر پیوست شد؟</label>
@@ -180,7 +180,7 @@
 
   <div class="d-flex gap-2">
     <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-lg"></i> ذخیره</button>
-    <a href="{{ url_for("havaleh.havaleh_list) }}" class="btn btn-outline-secondary">انصراف</a>
+    <a href="{{ url_for("havaleh.havaleh_list") }}" class="btn btn-outline-secondary">انصراف</a>
   </div>
 </form>
 {% endblock %}

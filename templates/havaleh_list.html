@@ -7,7 +7,7 @@
     <span class="heading-icon"><i class="bi bi-receipt-cutoff"></i></span>
     <div><h4>لیست حواله‌ها</h4><p>جستجو، بررسی وضعیت، مغایرت وزن و اسناد هر حواله</p></div>
   </div>
-  <a href="{{ url_for("havaleh.havaleh_new) }}" class="btn btn-primary"><i class="bi bi-plus-lg ms-1"></i> ثبت حواله جدید</a>
+  <a href="{{ url_for("havaleh.havaleh_new") }}" class="btn btn-primary"><i class="bi bi-plus-lg ms-1"></i> ثبت حواله جدید</a>
 </div>
 
 <form class="card p-3 mb-3" method="get"><div class="row g-2 align-items-center">
@@ -85,8 +85,8 @@
             {% else %}—{% endif %}
           </td>
           <td class="text-nowrap">
-            <a href="{{ url_for("havaleh.havaleh_edit, id=h.id) }}" class="btn btn-sm btn-outline-primary" title="ویرایش"><i class="bi bi-pencil"></i></a>
-            <form method="post" action="{{ url_for("havaleh.havaleh_delete, id=h.id) }}" class="d-inline" onsubmit="return confirm('آیا از حذف این حواله مطمئن هستید؟')">
+            <a href="{{ url_for("havaleh.havaleh_edit", id=h.id) }}" class="btn btn-sm btn-outline-primary" title="ویرایش"><i class="bi bi-pencil"></i></a>
+            <form method="post" action="{{ url_for("havaleh.havaleh_delete", id=h.id) }}" class="d-inline" onsubmit="return confirm('آیا از حذف این حواله مطمئن هستید؟')">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
               <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button>
             </form>

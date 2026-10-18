@@ -11,8 +11,8 @@
     </div>
   </div>
   <div class="d-flex flex-wrap gap-2">
-    <a href="{{ url_for("havaleh.havaleh_new) }}" class="btn btn-primary"><i class="bi bi-plus-lg ms-1"></i> ثبت حواله جدید</a>
-    <a href="{{ url_for("havaleh.havaleh_list) }}" class="btn btn-outline-primary"><i class="bi bi-receipt ms-1"></i> مشاهده حواله‌ها</a>
+    <a href="{{ url_for("havaleh.havaleh_new") }}" class="btn btn-primary"><i class="bi bi-plus-lg ms-1"></i> ثبت حواله جدید</a>
+    <a href="{{ url_for("havaleh.havaleh_list") }}" class="btn btn-outline-primary"><i class="bi bi-receipt ms-1"></i> مشاهده حواله‌ها</a>
   </div>
 </div>
 
@@ -125,7 +125,7 @@
         <div class="small text-muted">موارد ناقص، مغایرت‌ها و اسناد بررسی‌نشده</div>
       </div>
     </div>
-    <a href="{{ url_for("havaleh.havaleh_list) }}" class="btn btn-outline-primary btn-sm">مشاهده همه <i class="bi bi-arrow-left me-1"></i></a>
+    <a href="{{ url_for("havaleh.havaleh_list") }}" class="btn btn-outline-primary btn-sm">مشاهده همه <i class="bi bi-arrow-left me-1"></i></a>
   </div>
   {% if followups %}
   <div class="table-responsive">
@@ -146,7 +146,7 @@
           <td>{{ h.sharh_moghayerat or '—' }}</td>
           <td class="text-nowrap {% if h.ekhtelaf_vazn is not none and h.ekhtelaf_vazn|abs > 100 %}text-danger fw-bold{% endif %}">{% if h.ekhtelaf_vazn is not none %}{{ "{:,.0f}".format(h.ekhtelaf_vazn) }} kg{% else %}—{% endif %}</td>
           <td>{{ h.vaziyat_ghabzha or '—' }}</td>
-          <td><a href="{{ url_for("havaleh.havaleh_edit, id=h.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square ms-1"></i> بررسی</a></td>
+          <td><a href="{{ url_for("havaleh.havaleh_edit", id=h.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square ms-1"></i> بررسی</a></td>
         </tr>
         {% endfor %}
       </tbody>
