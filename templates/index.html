@@ -2,109 +2,158 @@
 {% block title %}داشبورد | کنترل حمل ورق فراسکو{% endblock %}
 
 {% block content %}
-<h4 class="mb-4"><i class="bi bi-speedometer2"></i> داشبورد و گزارش جمع‌بندی</h4>
+<div class="page-heading">
+  <div class="heading-group">
+    <span class="heading-icon"><i class="bi bi-grid-1x2-fill"></i></span>
+    <div>
+      <h4>داشبورد مدیریتی</h4>
+      <p>نمای کلی حواله‌ها، وزن حمل‌شده و موارد نیازمند پیگیری</p>
+    </div>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('havaleh_new') }}" class="btn btn-primary"><i class="bi bi-plus-lg ms-1"></i> ثبت حواله جدید</a>
+    <a href="{{ url_for('havaleh_list') }}" class="btn btn-outline-primary"><i class="bi bi-receipt ms-1"></i> مشاهده حواله‌ها</a>
+  </div>
+</div>
+
+<div class="card mb-4 overflow-hidden" style="background:linear-gradient(115deg,#10243a,#1b4b60 70%,#087f7b);border:0;color:#fff;">
+  <div class="p-4 p-lg-5 d-flex flex-wrap align-items-center justify-content-between gap-4 position-relative">
+    <div style="max-width:650px;position:relative;z-index:1">
+      <div class="small mb-2" style="color:#8ce5dc;font-weight:700;letter-spacing:.3px"><i class="bi bi-activity ms-1"></i> مرکز کنترل عملیات حمل</div>
+      <h2 class="fw-bold mb-2" style="font-size:clamp(1.3rem,3vw,2rem);line-height:1.7">اطلاعات دقیق‌تر، کنترل مطمئن‌تر</h2>
+      <p class="mb-0" style="color:#d3e1e8;line-height:2">وضعیت حواله‌ها، اسناد باسکول و مغایرت وزن را در یک نمای یکپارچه بررسی کنید و موارد باز را پیش از پایان عملیات پیگیری کنید.</p>
+    </div>
+    <div class="d-flex gap-3 align-items-center" style="position:relative;z-index:1">
+      <div class="text-center px-3 py-2" style="border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);border-radius:14px;min-width:95px">
+        <div class="small" style="color:#c1d6e1">کل حواله‌ها</div>
+        <div class="fw-bold fs-3">{{ stats.total }}</div>
+      </div>
+      <div class="text-center px-3 py-2" style="border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);border-radius:14px;min-width:95px">
+        <div class="small" style="color:#c1d6e1">تکمیل‌شده</div>
+        <div class="fw-bold fs-3" style="color:#8ce5b5">{{ stats.completed }}</div>
+      </div>
+    </div>
+    <i class="bi bi-truck-front" style="position:absolute;left:2%;bottom:-40px;font-size:12rem;color:rgba(255,255,255,.045);pointer-events:none"></i>
+  </div>
+</div>
 
 <div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="card stat-card text-center p-3">
-      <div class="text-muted small">کل حواله‌ها</div>
-      <div class="stat-value text-primary">{{ stats.total }}</div>
+  <div class="col-6 col-xl-3">
+    <div class="card stat-card p-3 p-lg-4 h-100" style="--accent:#2e74c8;--icon-bg:#e5efff">
+      <div class="d-flex align-items-center justify-content-between gap-2">
+        <span class="stat-label">کل حواله‌ها</span><span class="stat-icon"><i class="bi bi-files"></i></span>
+      </div>
+      <div class="stat-value">{{ stats.total }}</div>
+      <div class="stat-foot">تمام حواله‌های ثبت‌شده</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card stat-card text-center p-3">
-      <div class="text-muted small">تکمیل‌شده</div>
-      <div class="stat-value text-success">{{ stats.completed }}</div>
+  <div class="col-6 col-xl-3">
+    <div class="card stat-card p-3 p-lg-4 h-100" style="--accent:#168653;--icon-bg:#e0f6e9">
+      <div class="d-flex align-items-center justify-content-between gap-2">
+        <span class="stat-label">تکمیل‌شده</span><span class="stat-icon"><i class="bi bi-check2-circle"></i></span>
+      </div>
+      <div class="stat-value">{{ stats.completed }}</div>
+      <div class="stat-foot">فرایندهای تکمیل‌شده</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card stat-card text-center p-3">
-      <div class="text-muted small">ناقص</div>
-      <div class="stat-value text-danger">{{ stats.incomplete }}</div>
+  <div class="col-6 col-xl-3">
+    <div class="card stat-card p-3 p-lg-4 h-100" style="--accent:#c53e4b;--icon-bg:#ffeaec">
+      <div class="d-flex align-items-center justify-content-between gap-2">
+        <span class="stat-label">حواله‌های ناقص</span><span class="stat-icon"><i class="bi bi-hourglass-split"></i></span>
+      </div>
+      <div class="stat-value">{{ stats.incomplete }}</div>
+      <div class="stat-foot">نیازمند تکمیل اطلاعات</div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card stat-card text-center p-3">
-      <div class="text-muted small">نیازمند بررسی</div>
-      <div class="stat-value text-warning">{{ stats.need_review }}</div>
+  <div class="col-6 col-xl-3">
+    <div class="card stat-card p-3 p-lg-4 h-100" style="--accent:#c17a13;--icon-bg:#fff1d8">
+      <div class="d-flex align-items-center justify-content-between gap-2">
+        <span class="stat-label">نیازمند بررسی</span><span class="stat-icon"><i class="bi bi-exclamation-triangle"></i></span>
+      </div>
+      <div class="stat-value">{{ stats.need_review }}</div>
+      <div class="stat-foot">موارد دارای ابهام یا مغایرت</div>
     </div>
   </div>
 </div>
 
 <div class="row g-3 mb-4">
-  <div class="col-md-6">
-    <div class="card p-3">
-      <h6 class="section-title">خلاصه وزنی</h6>
-      <table class="table table-sm mb-0">
-        <tr><td>مجموع وزن اسنادی</td><td class="fw-bold">{{ "{:,.0f}".format(stats.sum_esnadi) }} کیلوگرم</td><td>{{ "{:,.2f}".format(stats.sum_esnadi/1000) }} تن</td></tr>
-        <tr><td>مجموع وزن خالص باسکول</td><td class="fw-bold">{{ "{:,.0f}".format(stats.sum_khales) }} کیلوگرم</td><td>{{ "{:,.2f}".format(stats.sum_khales/1000) }} تن</td></tr>
-        <tr><td>بالانس کل (خالص − اسنادی)</td>
-          <td class="fw-bold {% if stats.balance < 0 %}text-danger{% else %}text-success{% endif %}">
-            {{ "{:,.0f}".format(stats.balance) }} کیلوگرم
-          </td>
-          <td>{{ "{:,.2f}".format(stats.balance/1000) }} تن</td>
-        </tr>
-      </table>
+  <div class="col-lg-6">
+    <div class="card p-3 p-lg-4 h-100">
+      <h6 class="section-title"><i class="bi bi-speedometer2"></i> خلاصه وزنی</h6>
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <tbody>
+            <tr><td>مجموع وزن اسنادی</td><td class="fw-bold text-nowrap">{{ "{:,.0f}".format(stats.sum_esnadi) }} کیلوگرم</td><td class="text-muted text-nowrap">{{ "{:,.2f}".format(stats.sum_esnadi/1000) }} تن</td></tr>
+            <tr><td>مجموع وزن خالص باسکول</td><td class="fw-bold text-nowrap">{{ "{:,.0f}".format(stats.sum_khales) }} کیلوگرم</td><td class="text-muted text-nowrap">{{ "{:,.2f}".format(stats.sum_khales/1000) }} تن</td></tr>
+            <tr>
+              <td>بالانس کل <small class="text-muted">(خالص − اسنادی)</small></td>
+              <td class="fw-bold text-nowrap {% if stats.balance < 0 %}text-danger{% else %}text-success{% endif %}">{{ "{:,.0f}".format(stats.balance) }} کیلوگرم</td>
+              <td class="text-muted text-nowrap">{{ "{:,.2f}".format(stats.balance/1000) }} تن</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="d-flex align-items-center gap-2 rounded-3 p-3 mt-2" style="background:#f4f8fb;color:#61758a;font-size:.78rem">
+        <i class="bi bi-info-circle-fill" style="color:#168e8a"></i>
+        <span>بالانس منفی نشان‌دهنده کسری وزن نسبت به اسناد است.</span>
+      </div>
     </div>
   </div>
-  <div class="col-md-6">
-    <div class="card p-3">
-      <h6 class="section-title">مغایرت و مدت توقف</h6>
-      <table class="table table-sm mb-0">
-        <tr><td>مغایرت مثبت (اضافه)</td><td>{{ stats.pos_diff }} مورد</td><td>{{ "{:,.0f}".format(stats.sum_pos) }} کیلوگرم</td></tr>
-        <tr><td>مغایرت منفی (کسری)</td><td>{{ stats.neg_diff }} مورد</td><td>{{ "{:,.0f}".format(stats.sum_neg) }} کیلوگرم</td></tr>
-        <tr><td>فاقد قبض پر / خالی</td><td>{{ stats.no_ghabz_por }} / {{ stats.no_ghabz_khali }}</td><td></td></tr>
-        <tr><td>مجموع / میانگین مدت توقف</td><td>{{ stats.total_duration }} ساعت</td><td>میانگین {{ stats.avg_duration }} ساعت</td></tr>
-      </table>
+  <div class="col-lg-6">
+    <div class="card p-3 p-lg-4 h-100">
+      <h6 class="section-title"><i class="bi bi-clipboard2-pulse"></i> مغایرت، اسناد و توقف</h6>
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <tbody>
+            <tr><td>مغایرت مثبت (اضافه)</td><td class="text-nowrap">{{ stats.pos_diff }} مورد</td><td class="fw-bold text-success text-nowrap">{{ "{:,.0f}".format(stats.sum_pos) }} کیلوگرم</td></tr>
+            <tr><td>مغایرت منفی (کسری)</td><td class="text-nowrap">{{ stats.neg_diff }} مورد</td><td class="fw-bold text-danger text-nowrap">{{ "{:,.0f}".format(stats.sum_neg) }} کیلوگرم</td></tr>
+            <tr><td>قبض پر / خالی ثبت‌نشده</td><td class="fw-bold text-nowrap">{{ stats.no_ghabz_por }} / {{ stats.no_ghabz_khali }}</td><td class="text-muted">مورد</td></tr>
+            <tr><td>مجموع مدت توقف</td><td class="fw-bold text-nowrap">{{ stats.total_duration }} ساعت</td><td class="text-muted text-nowrap">میانگین {{ stats.avg_duration }} ساعت</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="card p-3">
-  <h6 class="section-title"><i class="bi bi-exclamation-triangle"></i> حواله‌های نیازمند پیگیری</h6>
+<div class="card">
+  <div class="p-3 p-lg-4 d-flex flex-wrap align-items-center justify-content-between gap-2 border-bottom" style="border-color:var(--line)!important">
+    <div class="d-flex align-items-center gap-2">
+      <span class="heading-icon" style="background:#fff0d7;color:#9a5b00"><i class="bi bi-bell-fill"></i></span>
+      <div>
+        <h5 class="mb-1 fw-bold" style="font-size:.98rem">حواله‌های نیازمند پیگیری</h5>
+        <div class="small text-muted">موارد ناقص، مغایرت‌ها و اسناد بررسی‌نشده</div>
+      </div>
+    </div>
+    <a href="{{ url_for('havaleh_list') }}" class="btn btn-outline-primary btn-sm">مشاهده همه <i class="bi bi-arrow-left me-1"></i></a>
+  </div>
   {% if followups %}
   <div class="table-responsive">
-    <table class="table table-hover table-sm">
-      <thead class="table-light">
-        <tr>
-          <th>شماره حواله</th>
-          <th>پلاک</th>
-          <th>وضعیت حواله</th>
-          <th>وضعیت مغایرت</th>
-          <th>شرح مغایرت</th>
-          <th>اختلاف وزن</th>
-          <th>وضعیت قبض‌ها</th>
-          <th></th>
-        </tr>
-      </thead>
+    <table class="table table-hover">
+      <thead><tr><th>شماره حواله</th><th>پلاک</th><th>وضعیت</th><th>مغایرت</th><th>شرح مغایرت</th><th>اختلاف وزن</th><th>قبض‌ها</th><th>عملیات</th></tr></thead>
       <tbody>
         {% for h in followups %}
         <tr>
-          <td>{{ h.shomare_havaleh }}</td>
-          <td>{{ h.pelak or '—' }}</td>
+          <td class="fw-bold text-nowrap">{{ h.shomare_havaleh }}</td>
+          <td class="text-nowrap">{{ h.pelak or '—' }}</td>
           <td>
-            {% if h.vaziyat_havaleh == 'تکمیل‌شده' %}
-              <span class="badge badge-complete">{{ h.vaziyat_havaleh }}</span>
-            {% elif h.vaziyat_havaleh == 'ناقص' %}
-              <span class="badge badge-incomplete">{{ h.vaziyat_havaleh }}</span>
-            {% elif h.vaziyat_havaleh == 'نیازمند بررسی' %}
-              <span class="badge badge-review">{{ h.vaziyat_havaleh }}</span>
-            {% else %}
-              <span class="badge bg-secondary">{{ h.vaziyat_havaleh }}</span>
-            {% endif %}
+            {% if h.vaziyat_havaleh == 'تکمیل‌شده' %}<span class="badge badge-complete">{{ h.vaziyat_havaleh }}</span>
+            {% elif h.vaziyat_havaleh == 'ناقص' %}<span class="badge badge-incomplete">{{ h.vaziyat_havaleh }}</span>
+            {% elif h.vaziyat_havaleh == 'نیازمند بررسی' %}<span class="badge badge-review">{{ h.vaziyat_havaleh }}</span>
+            {% else %}<span class="badge bg-secondary">{{ h.vaziyat_havaleh }}</span>{% endif %}
           </td>
           <td>{{ h.vaziyat_moghayerat or '—' }}</td>
           <td>{{ h.sharh_moghayerat or '—' }}</td>
-          <td>{% if h.ekhtelaf_vazn is not none %}{{ "{:,.0f}".format(h.ekhtelaf_vazn) }}{% else %}—{% endif %}</td>
+          <td class="text-nowrap {% if h.ekhtelaf_vazn is not none and h.ekhtelaf_vazn|abs > 100 %}text-danger fw-bold{% endif %}">{% if h.ekhtelaf_vazn is not none %}{{ "{:,.0f}".format(h.ekhtelaf_vazn) }} kg{% else %}—{% endif %}</td>
           <td>{{ h.vaziyat_ghabzha or '—' }}</td>
-          <td><a href="{{ url_for('havaleh_edit', id=h.id) }}" class="btn btn-sm btn-outline-primary">ویرایش</a></td>
+          <td><a href="{{ url_for('havaleh_edit', id=h.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square ms-1"></i> بررسی</a></td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
   {% else %}
-  <p class="text-muted mb-0">مورد نیازمند پیگیری وجود ندارد.</p>
+  <div class="empty-state"><i class="bi bi-check2-circle"></i><strong class="d-block mb-1">همه‌چیز مرتب است</strong><span class="small">در حال حاضر موردی برای پیگیری ثبت نشده است.</span></div>
   {% endif %}
 </div>
 {% endblock %}
