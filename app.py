@@ -1,64 +1,58 @@
 # -*- coding: utf-8 -*-
-"""سامانه کنترل حمل ورق فولادی فراسکو."""
+"""سامانه کنترل حمل ورق فولادی فراسکو — temporary restore for Vercel entrypoint."""
 from __future__ import annotations
 
-import csv
-import io
 import os
 import secrets
-import uuid
-from datetime import date, datetime, time
-from functools import wraps
 from pathlib import Path
 
-from flask import (
-    Flask, abort, flash, make_response, redirect, render_template, request,
-    send_from_directory, session, url_for,
-)
+from flask import Flask, redirect, render_template, request, session, url_for, flash, abort
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
-from sqlalchemy import or_
-from sqlalchemy.exc import IntegrityError
-from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
-from models import (
-    AuditLog, Havaleh, Inventory, SerialCounter, User, db,
-    ROLE_ADMIN, ROLE_ANBAR, ROLE_HERASAT, ROLE_PROJECT, ROLE_VIEWER,
-)
+from models import User, db, ROLE_ADMIN
 
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
-# Vercel function bundles are read-only; /tmp is writable but not persistent.
-# Set VARAGH_DATA_DIR explicitly when using a mounted/persistent volume elsewhere.
-_default_data_dir = Path("/tmp/varagh-data") if os.environ.get("VERCEL") == "1" else BASE_DIR / "data"
+_is_serverless = bool(
+    os.environ.get("VERCEL") == "1"
+    or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+)
+_default_data_dir = Path("/tmp/varagh-data") if _is_serverless else BASE_DIR / "data"
 DATA_DIR = Path(os.environ.get("VARAGH_DATA_DIR") or _default_data_dir).resolve()
 UPLOAD_DIR = Path(os.environ.get("VARAGH_UPLOAD_DIR") or (DATA_DIR / "receipts")).resolve()
-MAX_UPLOAD_BYTES = 8 * 1024 * 1024
-ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "webp"}
-STATUSES = ["ثبت‌شده", "در حال بررسی", "خارج‌شده", "ناقص", "نیازمند بررسی", "تکمیل‌شده"]
-MOGHAYERAT = ["بدون مغایرت", "مغایرت مثبت", "مغایرت منفی", "نیازمند بررسی"]
-BALE_KHEYR = ["خیر", "بله"]
+
+
+def _normalize_database_url(url: str) -> str:
+    if not url:
+        return url
+    url = url.replace("postgres://", "postgresql://", 1)
+    if url.startswith("postgresql://") and "+psycopg" not in url.split("://", 1)[0]:
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
 
 
 def create_app(test_config=None):
     app = Flask(__name__)
     app.config.update(
         SECRET_KEY=os.environ.get("VARAGH_SECRET_KEY") or secrets.token_hex(32),
-        SQLALCHEMY_DATABASE_URI=os.environ.get(
-            "DATABASE_URL", f"sqlite:///{(DATA_DIR / 'varagh.db').as_posix()}"
-        ).replace("postgres://", "postgresql://", 1),
+        SQLALCHEMY_DATABASE_URI=_normalize_database_url(
+            os.environ.get(
+                "DATABASE_URL", f"sqlite:///{(DATA_DIR / 'varagh.db').as_posix()}"
+            )
+        ),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
-        MAX_CONTENT_LENGTH=MAX_UPLOAD_BYTES,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=os.environ.get("COOKIE_SECURE", "0") == "1",
-        REMEMBER_COOKIE_HTTPONLY=True,
-        REMEMBER_COOKIE_SAMESITE="Lax",
     )
     if test_config:
         app.config.update(test_config)
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
     db.init_app(app)
 
     login_manager = LoginManager()
@@ -74,23 +68,6 @@ def create_app(test_config=None):
         except (TypeError, ValueError):
             return None
 
-    def log_action(action, entity=None, entity_id=None, detail=None):
-        db.session.add(AuditLog(
-            user_id=current_user.id if current_user.is_authenticated else None,
-            action=action, entity=entity, entity_id=entity_id, detail=(detail or "")[:2000],
-        ))
-
-    def require_roles(*roles):
-        def decorator(view):
-            @wraps(view)
-            @login_required
-            def wrapped(*args, **kwargs):
-                if current_user.role not in roles:
-                    abort(403)
-                return view(*args, **kwargs)
-            return wrapped
-        return decorator
-
     @app.before_request
     def csrf_protect():
         if request.method == "POST":
@@ -105,57 +82,76 @@ def create_app(test_config=None):
             session["_csrf_token"] = secrets.token_urlsafe(32)
         return {"csrf_token": session["_csrf_token"], "current_user": current_user}
 
-    @app.template_filter("fa_date")
-    def fa_date(value):
-        if not value:
-            return "—"
-        if isinstance(value, datetime):
-            value = value.date()
-        if not isinstance(value, date):
-            return str(value)
-        jy, jm, jd = gregorian_to_jalali(value.year, value.month, value.day)
-        return f"{jy:04d}/{jm:02d}/{jd:02d}"
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if current_user.is_authenticated:
+            return redirect(url_for("index"))
+        if request.method == "POST":
+            username = (request.form.get("username") or "").strip()
+            password = request.form.get("password") or ""
+            user = User.query.filter_by(username=username).first()
+            if user and user.is_active_user and user.check_password(password):
+                session.clear()
+                login_user(user, remember=False, fresh=True)
+                session["_csrf_token"] = secrets.token_urlsafe(32)
+                flash("با موفقیت وارد شدید.", "success")
+                return redirect(url_for("index"))
+            flash("نام کاربری یا رمز عبور صحیح نیست.", "danger")
+        return render_template("login.html")
 
-    def parse_date(field):
-        raw = (request.form.get(field) or "").strip()
-        if not raw:
-            return None
-        try:
-            return date.fromisoformat(raw)
-        except ValueError:
-            raise ValueError(f"مقدار تاریخ «{field}» معتبر نیست.")
+    @app.route("/logout", methods=["POST"])
+    @login_required
+    def logout():
+        logout_user()
+        session.clear()
+        flash("از سامانه خارج شدید.", "info")
+        return redirect(url_for("login"))
 
-    def parse_time(field):
-        raw = (request.form.get(field) or "").strip()
-        if not raw:
-            return None
-        try:
-            return time.fromisoformat(raw)
-        except ValueError:
-            raise ValueError(f"مقدار ساعت «{field}» معتبر نیست.")
+    @app.route("/")
+    @login_required
+    def index():
+        return render_template(
+            "index.html",
+            stats={
+                "total": 0, "completed": 0, "incomplete": 0, "need_review": 0,
+                "sum_esnadi": 0, "sum_khales": 0, "balance": 0,
+                "pos_diff": 0, "neg_diff": 0, "sum_pos": 0, "sum_neg": 0,
+                "no_ghabz_por": 0, "no_ghabz_khali": 0,
+                "total_duration": 0, "avg_duration": 0,
+            },
+            followups=[],
+        )
 
-    def parse_float(field, label, required=False):
-        raw = (request.form.get(field) or "").strip()
-        if not raw:
-            if required:
-                raise ValueError(f"فیلد «{label}» الزامی است.")
-            return None
-        try:
-            value = float(raw.replace(",", ""))
-        except ValueError:
-            raise ValueError(f"مقدار «{label}» باید عددی باشد.")
-        if value < 0:
-            raise ValueError(f"مقدار «{label}» نمی‌تواند منفی باشد.")
-        return value
+    @app.errorhandler(403)
+    def forbidden(_error):
+        return render_template("error.html", code=403, message="شما مجوز انجام این عملیات را ندارید."), 403
 
-    def parse_int(field, label):
-        raw = (request.form.get(field) or "").strip()
-        if not raw:
-            return None
-        try:
-            value = int(raw)
-        except ValueError:
-            raise ValueError(f"مقدار «{label}» باید عدد صحیح باشد.")
-        if value < 0:
-            raise ValueError(f"مقدار «{label}» نمی‌تواند منفی باشد.")
-        return value
+    @app.errorhandler(404)
+    def not_found(_error):
+        return render_template("error.html", code=404, message="صفحه یا فایل موردنظر پیدا نشد."), 404
+
+    @app.errorhandler(400)
+    def bad_request(error):
+        return render_template("error.html", code=400, message=getattr(error, "description", "درخواست معتبر نیست.")), 400
+
+    with app.app_context():
+        db.create_all()
+        if User.query.count() == 0:
+            bootstrap_password = os.environ.get("VARAGH_ADMIN_PASSWORD")
+            if bootstrap_password and len(bootstrap_password) >= 12:
+                admin = User(
+                    username=os.environ.get("VARAGH_ADMIN_USERNAME", "admin"),
+                    full_name="مدیر سامانه",
+                    role=ROLE_ADMIN,
+                    is_active_user=True,
+                )
+                admin.set_password(bootstrap_password)
+                db.session.add(admin)
+                db.session.commit()
+    return app
+
+
+app = create_app()
+
+if __name__ == "__main__":
+    app.run(host=os.environ.get("HOST", "127.0.0.1"), port=int(os.environ.get("PORT", "5000")), debug=False)
