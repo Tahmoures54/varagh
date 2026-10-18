@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import os
+import re
 import secrets
 import uuid
 from datetime import date, datetime, time
@@ -724,15 +725,30 @@ def create_app(test_config=None):
 
     with app.app_context():
         db.create_all()
+        # Admin phone and password are configured only through Vercel environment variables.
+        # The one-time rename migrates the existing admin account without deleting app data.
+        admin_phone = (os.environ.get("VARAGH_ADMIN_PHONE") or "").strip()
+        bootstrap_password = os.environ.get("VARAGH_ADMIN_PASSWORD") or ""
+        valid_admin_phone = bool(re.fullmatch(r"09\\d{9}", admin_phone))
+        if valid_admin_phone:
+            phone_user = User.query.filter_by(username=admin_phone).first()
+            if phone_user is None:
+                legacy_admin_name = os.environ.get("VARAGH_ADMIN_USERNAME", "admin")
+                legacy_admin = User.query.filter_by(username=legacy_admin_name).first()
+                if legacy_admin is not None and legacy_admin.role == ROLE_ADMIN:
+                    legacy_admin.username = admin_phone
+                    # A strong env password is applied once, during this username migration.
+                    if len(bootstrap_password) >= 12:
+                        legacy_admin.set_password(bootstrap_password)
+                    db.session.commit()
         # Never create published default passwords. Initial admin is provisioned explicitly.
-        if User.query.count() == 0:
-            bootstrap_password = os.environ.get("VARAGH_ADMIN_PASSWORD")
-            if bootstrap_password and len(bootstrap_password) >= 12:
-                admin = User(username=os.environ.get("VARAGH_ADMIN_USERNAME", "admin"),
-                             full_name="مدیر سامانه", role=ROLE_ADMIN, is_active_user=True)
-                admin.set_password(bootstrap_password)
-                db.session.add(admin)
-                db.session.commit()
+        if User.query.count() == 0 and bootstrap_password and len(bootstrap_password) >= 12:
+            initial_username = admin_phone if valid_admin_phone else os.environ.get("VARAGH_ADMIN_USERNAME", "admin")
+            admin = User(username=initial_username, full_name="مدیر سامانه",
+                         role=ROLE_ADMIN, is_active_user=True)
+            admin.set_password(bootstrap_password)
+            db.session.add(admin)
+            db.session.commit()
     return app
 
 
