@@ -1,20 +1,66 @@
 # -*- coding: utf-8 -*-
 """
 مدل‌های پایگاه داده سیستم کنترل حمل ورق فولادی فراسکو
+فاز ۲: کاربر، نقش، آپلود قبض، کسر موجودی
 """
 from datetime import datetime, date, time
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
+ROLE_ADMIN = 'admin'
+ROLE_HERASAT = 'herasat'
+ROLE_ANBAR = 'anbar'
+ROLE_PROJECT = 'project'
+ROLE_VIEWER = 'viewer'
+
+ROLES = {
+    ROLE_ADMIN: 'مدیر سیستم',
+    ROLE_HERASAT: 'حراست',
+    ROLE_ANBAR: 'انبار',
+    ROLE_PROJECT: 'پروژه',
+    ROLE_VIEWER: 'مشاهده‌گر',
+}
+
+
+class User(UserMixin, db.Model):
+    __tablename__ = 'user'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(256), nullable=False)
+    full_name = db.Column(db.String(120), nullable=True)
+    role = db.Column(db.String(30), default=ROLE_VIEWER, nullable=False)
+    is_active_user = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    @property
+    def role_label(self):
+        return ROLES.get(self.role, self.role)
+
+    def can_edit_entry_exit(self):
+        return self.role in (ROLE_ADMIN, ROLE_HERASAT)
+
+    def can_edit_scale(self):
+        return self.role in (ROLE_ADMIN, ROLE_ANBAR)
+
+    def can_approve(self):
+        return self.role in (ROLE_ADMIN, ROLE_PROJECT)
+
+    def can_edit_all(self):
+        return self.role == ROLE_ADMIN
+
 
 class Havaleh(db.Model):
-    """حواله / کامیون"""
     __tablename__ = 'havaleh'
-
     id = db.Column(db.Integer, primary_key=True)
-
-    # الف) اطلاعات حواله و وسیله نقلیه
     shomare_havaleh = db.Column(db.String(50), unique=True, nullable=False, index=True)
     tarikh_havaleh = db.Column(db.Date, nullable=True)
     pelak = db.Column(db.String(20), nullable=True)
@@ -22,27 +68,22 @@ class Havaleh(db.Model):
     mobile_ranande = db.Column(db.String(20), nullable=True)
     sharh_kala = db.Column(db.String(100), nullable=True)
     moshakhasat_varagh = db.Column(db.String(200), nullable=True)
+    code_kala = db.Column(db.String(30), nullable=True, index=True)
     tedad_baste = db.Column(db.Integer, nullable=True)
-    vazn_esnadi = db.Column(db.Float, nullable=True)  # کیلوگرم
-
-    # ب) ورود و خروج
+    vazn_esnadi = db.Column(db.Float, nullable=True)
     tarikh_vorud = db.Column(db.Date, nullable=True)
     saat_vorud = db.Column(db.Time, nullable=True)
     tarikh_khoruj = db.Column(db.Date, nullable=True)
     saat_khoruj = db.Column(db.Time, nullable=True)
     masoul_sabt = db.Column(db.String(100), nullable=True)
-
-    # ج) باسکول
     vazn_por = db.Column(db.Float, nullable=True)
     vazn_khali = db.Column(db.Float, nullable=True)
-    ghabz_por_piost = db.Column(db.String(10), default='خیر')  # بله / خیر
+    ghabz_por_piost = db.Column(db.String(10), default='خیر')
     ghabz_khali_piost = db.Column(db.String(10), default='خیر')
-
-    # د) وضعیت کنترل
+    ghabz_por_file = db.Column(db.String(255), nullable=True)
+    ghabz_khali_file = db.Column(db.String(255), nullable=True)
     vaziyat_havaleh = db.Column(db.String(30), default='ثبت‌شده')
-    # ثبت‌شده / خارج‌شده / ناقص / نیازمند بررسی / تکمیل‌شده
     vaziyat_moghayerat = db.Column(db.String(30), default='بدون مغایرت')
-    # بدون مغایرت / نیازمند بررسی / تعیین تکلیف‌شده
     sharh_moghayerat = db.Column(db.Text, nullable=True)
     masoul_peygiri = db.Column(db.String(100), nullable=True)
     tarikh_peygiri = db.Column(db.Date, nullable=True)
@@ -50,11 +91,14 @@ class Havaleh(db.Model):
     taeed_nahayi = db.Column(db.String(100), nullable=True)
     tarikh_taeed = db.Column(db.Date, nullable=True)
     tozihat = db.Column(db.Text, nullable=True)
-
+    inventory_deducted = db.Column(db.Boolean, default=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    updated_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_by = db.relationship('User', foreign_keys=[created_by_id])
+    updated_by = db.relationship('User', foreign_keys=[updated_by_id])
 
-    # ---------- محاسبات ----------
     @property
     def vazn_khales(self):
         if self.vazn_por is not None and self.vazn_khali is not None:
@@ -77,7 +121,6 @@ class Havaleh(db.Model):
 
     @property
     def moddat_tavaghof_saat(self):
-        """مدت توقف به ساعت (اعشاری)"""
         if not all([self.tarikh_vorud, self.saat_vorud, self.tarikh_khoruj, self.saat_khoruj]):
             return None
         dt_vorud = datetime.combine(self.tarikh_vorud, self.saat_vorud)
@@ -93,73 +136,37 @@ class Havaleh(db.Model):
             return 'ناقص'
         return None
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'shomare_havaleh': self.shomare_havaleh,
-            'tarikh_havaleh': self.tarikh_havaleh.isoformat() if self.tarikh_havaleh else None,
-            'pelak': self.pelak,
-            'name_ranande': self.name_ranande,
-            'mobile_ranande': self.mobile_ranande,
-            'sharh_kala': self.sharh_kala,
-            'moshakhasat_varagh': self.moshakhasat_varagh,
-            'tedad_baste': self.tedad_baste,
-            'vazn_esnadi': self.vazn_esnadi,
-            'tarikh_vorud': self.tarikh_vorud.isoformat() if self.tarikh_vorud else None,
-            'saat_vorud': self.saat_vorud.strftime('%H:%M') if self.saat_vorud else None,
-            'tarikh_khoruj': self.tarikh_khoruj.isoformat() if self.tarikh_khoruj else None,
-            'saat_khoruj': self.saat_khoruj.strftime('%H:%M') if self.saat_khoruj else None,
-            'moddat_tavaghof': self.moddat_tavaghof_saat,
-            'masoul_sabt': self.masoul_sabt,
-            'vazn_por': self.vazn_por,
-            'vazn_khali': self.vazn_khali,
-            'vazn_khales': self.vazn_khales,
-            'ekhtelaf_vazn': self.ekhtelaf_vazn,
-            'darsad_ekhtelaf': self.darsad_ekhtelaf,
-            'ghabz_por_piost': self.ghabz_por_piost,
-            'ghabz_khali_piost': self.ghabz_khali_piost,
-            'vaziyat_ghabzha': self.vaziyat_ghabzha,
-            'vaziyat_havaleh': self.vaziyat_havaleh,
-            'vaziyat_moghayerat': self.vaziyat_moghayerat,
-            'sharh_moghayerat': self.sharh_moghayerat,
-            'masoul_peygiri': self.masoul_peygiri,
-            'tarikh_peygiri': self.tarikh_peygiri.isoformat() if self.tarikh_peygiri else None,
-            'natije_peygiri': self.natije_peygiri,
-            'taeed_nahayi': self.taeed_nahayi,
-            'tarikh_taeed': self.tarikh_taeed.isoformat() if self.tarikh_taeed else None,
-            'tozihat': self.tozihat,
-        }
-
 
 class Inventory(db.Model):
-    """ایندکس موجودی ورق‌ها"""
     __tablename__ = 'inventory'
-
     id = db.Column(db.Integer, primary_key=True)
     radif = db.Column(db.Integer, nullable=True)
     code_kala = db.Column(db.String(30), index=True, nullable=False)
     name_kala = db.Column(db.String(100), nullable=True)
-    zekhamat = db.Column(db.Float, nullable=True)  # میل
+    zekhamat = db.Column(db.Float, nullable=True)
     moshakhasat = db.Column(db.String(200), nullable=True)
     vahed = db.Column(db.String(20), default='کیلو گرم')
-    mojudi_vaghei = db.Column(db.Float, nullable=True)  # کیلوگرم کل
+    mojudi_vaghei = db.Column(db.Float, nullable=True)
     tedad_sheet = db.Column(db.Float, nullable=True)
     vazn_har_sheet = db.Column(db.Float, nullable=True)
-    vazn_goruh = db.Column(db.Float, nullable=True)  # برای گروه‌های فرعی
+    vazn_goruh = db.Column(db.Float, nullable=True)
     mogheiyat = db.Column(db.String(200), nullable=True)
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'radif': self.radif,
-            'code_kala': self.code_kala,
-            'name_kala': self.name_kala,
-            'zekhamat': self.zekhamat,
-            'moshakhasat': self.moshakhasat,
-            'vahed': self.vahed,
-            'mojudi_vaghei': self.mojudi_vaghei,
-            'tedad_sheet': self.tedad_sheet,
-            'vazn_har_sheet': self.vazn_har_sheet,
-            'vazn_goruh': self.vazn_goruh,
-            'mogheiyat': self.mogheiyat,
-        }
+
+class SerialCounter(db.Model):
+    __tablename__ = 'serial_counter'
+    id = db.Column(db.Integer, primary_key=True)
+    prefix = db.Column(db.String(30), unique=True, nullable=False)
+    last_number = db.Column(db.Integer, default=0)
+
+
+class AuditLog(db.Model):
+    __tablename__ = 'audit_log'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    action = db.Column(db.String(50), nullable=False)
+    entity = db.Column(db.String(50), nullable=True)
+    entity_id = db.Column(db.Integer, nullable=True)
+    detail = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship('User')
