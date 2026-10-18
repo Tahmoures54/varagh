@@ -17,7 +17,7 @@ from flask import (
 )
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from sqlalchemy import or_
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
@@ -78,6 +78,21 @@ def create_app(test_config=None):
     )
     if test_config:
         app.config.update(test_config)
+
+    # PostgreSQL connections can go stale between short-lived Vercel invocations.
+    # Pre-ping checks pooled connections before reuse; recycle limits their lifetime.
+    # Keep the per-instance pool small to avoid exhausting managed database connections.
+    database_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    if database_uri.startswith(("postgresql://", "postgresql+psycopg://")):
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+            "pool_pre_ping": True,
+            "pool_recycle": 240,
+            "pool_size": 1,
+            "max_overflow": 0,
+            "pool_timeout": 10,
+            "connect_args": {"connect_timeout": 10},
+        }
+
     # Serverless bundles are read-only; data goes to /tmp unless explicitly configured.
     # /tmp is ephemeral, so production deployments should use a managed database and durable file storage.
     try:
@@ -295,7 +310,20 @@ def create_app(test_config=None):
         if request.method == "POST":
             username = (request.form.get("username") or "").strip()
             password = request.form.get("password") or ""
-            user = User.query.filter_by(username=username).first()
+            # Retry once if the pool handed us a connection that the database
+            # closed unexpectedly. Never treat a database failure as bad credentials.
+            try:
+                user = User.query.filter_by(username=username).first()
+            except OperationalError:
+                db.session.rollback()
+                db.session.remove()
+                try:
+                    user = User.query.filter_by(username=username).first()
+                except OperationalError:
+                    db.session.rollback()
+                    db.session.remove()
+                    app.logger.exception("Database unavailable while checking login")
+                    abort(503, description="ارتباط با پایگاه داده موقتاً برقرار نیست؛ چند لحظه بعد دوباره تلاش کنید.")
             if user and user.is_active_user and user.check_password(password):
                 session.clear()
                 login_user(user, remember=False, fresh=True)
@@ -670,6 +698,14 @@ def create_app(test_config=None):
     @app.errorhandler(404)
     def not_found(_error):
         return render_template("error.html", code=404, message="صفحه یا فایل موردنظر پیدا نشد."), 404
+
+    @app.errorhandler(503)
+    def service_unavailable(error):
+        return render_template(
+            "error.html",
+            code=503,
+            message=getattr(error, "description", "سرویس موقتاً در دسترس نیست؛ دوباره تلاش کنید."),
+        ), 503
 
     @app.errorhandler(413)
     def too_large(_error):
