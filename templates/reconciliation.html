@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}جمع‌بندی انتقال و قیمت‌گذاری | کنترل حمل ورق فراسکو{% endblock %}
+{% block extra_css %}
+<style>
+  .recon-kpi { border:1px solid var(--line); border-radius:14px; padding:1rem; height:100%; background:#fff; }
+  .recon-kpi .value { font-size:1.35rem; font-weight:800; margin-top:.35rem; font-variant-numeric:tabular-nums; }
+  .print-only { display:none; }
+  @media print {
+    body { background:#fff!important; font-size:10pt; }
+    nav, footer, .no-print, .alert-dismissible .btn-close { display:none!important; }
+    main.container { max-width:none!important; padding:0!important; margin:0!important; }
+    .card { box-shadow:none!important; border:1px solid #bbb!important; break-inside:avoid; }
+    .table { font-size:8pt!important; }
+    .table td,.table th { padding:.25rem!important; }
+    .print-only { display:block; }
+    .screen-only { display:none!important; }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-heading no-print">
+  <div class="heading-group">
+    <span class="heading-icon"><i class="bi bi-clipboard2-data-fill"></i></span>
+    <div><h4>جمع‌بندی انتقال، توزین و قیمت‌گذاری</h4><p>کنترل مستندات هر سرویس، پیگیری کارشناسی و ثبت صورتجلسه نهایی مقادیر</p></div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <button class="btn btn-outline-primary" type="button" onclick="window.print()"><i class="bi bi-printer ms-1"></i> چاپ گزارش</button>
+    <a class="btn btn-primary" href="{{ url_for('reports.export_excel') }}"><i class="bi bi-file-earmark-spreadsheet ms-1"></i> دریافت اکسل</a>
+  </div>
+</div>
+
+<div class="print-only text-center mb-3">
+  <h3>گزارش جمع‌بندی انتقال ورق‌های مازاد پروژه</h3>
+  <p>سامانه کنترل حمل ورق فولادی فراسکو</p>
+</div>
+
+{% if valuation_overdue %}
+<div class="alert alert-danger d-flex gap-2 align-items-start">
+  <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+  <div><strong>مهلت کارشناسی سپری شده است.</strong> بیش از ۳۰ روز از تاریخ امضای صورتجلسه گذشته و تاریخ اعلام رسمی قیمت ثبت نشده است. مطابق توافق، ارزیابی مجدد باید پیگیری و نتیجه آن ثبت شود.</div>
+</div>
+{% elif control.agreement_signed_on and not control.valuation_announced_on %}
+<div class="alert alert-warning d-flex gap-2 align-items-start">
+  <i class="bi bi-clock-history fs-5"></i>
+  <div>تاریخ امضای صورتجلسه ثبت شده، اما قیمت کارشناسی هنوز اعلام نشده است. تاریخ شروع مهلت: <strong>{{ control.agreement_signed_on|fa_date }}</strong>.</div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3"><div class="recon-kpi"><div class="text-muted small">تعداد کل حواله‌ها / سرویس‌ها</div><div class="value">{{ "{:,}".format(stats.total) }}</div></div></div>
+  <div class="col-6 col-xl-3"><div class="recon-kpi"><div class="text-muted small">مجموع وزن اسنادی</div><div class="value">{{ "{:,.0f}".format(stats.document_weight) }} <small>کیلوگرم</small></div><small class="text-muted">{{ "{:,.3f}".format(stats.document_weight/1000) }} تن</small></div></div>
+  <div class="col-6 col-xl-3"><div class="recon-kpi"><div class="text-muted small">مجموع وزن خالص باسکولی</div><div class="value">{{ "{:,.0f}".format(stats.net_weight) }} <small>کیلوگرم</small></div><small class="text-muted">{{ "{:,.3f}".format(stats.net_weight/1000) }} تن</small></div></div>
+  <div class="col-6 col-xl-3"><div class="recon-kpi"><div class="text-muted small">اختلاف کل خالص − اسنادی</div><div class="value {% if stats.difference < 0 %}text-danger{% elif stats.difference > 0 %}text-success{% endif %}">{{ "{:,.0f}".format(stats.difference) }} <small>کیلوگرم</small></div><small class="text-muted">{{ "{:,.3f}".format(stats.difference/1000) }} تن</small></div></div>
+</div>
+
+<div class="card p-3 p-lg-4 mb-4">
+  <h5 class="section-title"><i class="bi bi-calculator"></i> وضعیت مستندات و سرویس‌ها</h5>
+  <div class="table-responsive">
+    <table class="table table-sm">
+      <tbody>
+        <tr><td>حواله‌های تکمیل‌شده</td><td class="fw-bold">{{ stats.completed }}</td><td>حواله‌های ناقص</td><td class="fw-bold">{{ stats.incomplete }}</td></tr>
+        <tr><td>موارد دارای مغایرت یا نیازمند بررسی</td><td class="fw-bold">{{ stats.review }}</td><td>سرویس‌های فاقد اطلاعات کامل ورود/خروج</td><td class="fw-bold">{{ stats.missing_times }}</td></tr>
+        <tr><td>قبض وزن پُر ثبت‌نشده</td><td class="fw-bold">{{ stats.missing_full }}</td><td>قبض وزن خالی ثبت‌نشده</td><td class="fw-bold">{{ stats.missing_empty }}</td></tr>
+        <tr><td>مجموع مدت توقف ثبت‌شده</td><td class="fw-bold">{{ "{:,.2f}".format(stats.duration) }} ساعت</td><td>قیمت کارشناسی هر کیلوگرم</td><td class="fw-bold">{% if control.valuation_price_per_kg is not none %}{{ "{:,.0f}".format(control.valuation_price_per_kg) }} ریال{% else %}اعلام نشده{% endif %}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {% if control.valuation_price_per_kg is not none %}
+  <div class="rounded-3 p-3 mt-2" style="background:#f3f8fb">
+    <div class="text-muted small">برآورد بهای وزنی بر اساس وزن خالص باسکولی و نرخ ثبت‌شده (صرفاً محاسبه سیستمی)</div>
+    <div class="fw-bold fs-5 mt-1">{{ "{:,.0f}".format(stats.net_weight * control.valuation_price_per_kg) }} ریال</div>
+    <small class="text-muted">مبنای قطعی تسویه باید مطابق نظر رسمی کارشناس، مقادیر مورد تأیید و اسناد معتبر طرفین باشد.</small>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card p-3 p-lg-4 mb-4 no-print">
+  <h5 class="section-title"><i class="bi bi-file-earmark-text"></i> ثبت تاریخ‌ها و نتیجه کارشناسی</h5>
+  <p class="small text-muted">ثبت قیمت در این بخش به‌تنهایی به معنای تسویه مالی نیست. تاریخ اعلام رسمی، مرجع/شماره گزارش و نرخ کارشناسی را مطابق سند رسمی وارد کنید.</p>
+  <form method="post" class="row g-3">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="action" value="save_valuation">
+    <div class="col-md-3"><label class="form-label">تاریخ امضای صورتجلسه اولیه</label><input type="date" name="agreement_signed_on" class="form-control" value="{{ control.agreement_signed_on.isoformat() if control.agreement_signed_on else '' }}"></div>
+    <div class="col-md-3"><label class="form-label">تاریخ اعلام رسمی کارشناسی</label><input type="date" name="valuation_announced_on" class="form-control" value="{{ control.valuation_announced_on.isoformat() if control.valuation_announced_on else '' }}"></div>
+    <div class="col-md-3"><label class="form-label">قیمت کارشناسی (ریال به ازای هر کیلوگرم)</label><input type="number" min="0" step="0.01" name="valuation_price_per_kg" class="form-control" value="{{ control.valuation_price_per_kg if control.valuation_price_per_kg is not none else '' }}"></div>
+    <div class="col-md-3"><label class="form-label">شماره / مرجع گزارش کارشناسی</label><input type="text" maxlength="300" name="valuation_reference" class="form-control" value="{{ control.valuation_reference or '' }}"></div>
+    <div class="col-12"><button class="btn btn-primary" type="submit"><i class="bi bi-check-lg ms-1"></i> ذخیره اطلاعات کارشناسی</button></div>
+  </form>
+</div>
+
+<div class="card p-3 p-lg-4 mb-4 no-print">
+  <h5 class="section-title"><i class="bi bi-file-earmark-check"></i> ثبت صورتجلسه نهایی مقادیر انتقال‌یافته</h5>
+  <p class="small text-muted">با ثبت این بخش، سامانه یک تصویر ثابت (Snapshot) از تعداد حواله‌ها، وزن اسنادی، وزن خالص باسکولی، اختلاف کل، مدت توقف و فهرست شماره حواله‌های موجود در همان لحظه نگهداری می‌کند. این ثبت، جای امضای فیزیکی طرفین را نمی‌گیرد.</p>
+  <form method="post" class="row g-3" onsubmit="return confirm('صورتجلسه نهایی با مقادیر فعلی ثبت شود؟ پیش از ثبت، مغایرت‌ها و قبض‌های ناقص را بررسی کنید.')">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="action" value="finalize_summary">
+    <div class="col-md-4"><label class="form-label">تاریخ صورتجلسه نهایی</label><input type="date" name="final_summary_signed_on" class="form-control" value="{{ control.final_summary_signed_on.isoformat() if control.final_summary_signed_on else '' }}" required></div>
+    <div class="col-md-8"><label class="form-label">نام و سمت تأییدکننده/تنظیم‌کننده</label><input type="text" name="final_summary_signed_by" class="form-control" maxlength="200" value="{{ control.final_summary_signed_by or '' }}" required></div>
+    <div class="col-12"><label class="form-label">توضیحات و موارد باز برای تعیین تکلیف</label><textarea name="final_summary_notes" class="form-control" rows="2">{{ control.final_summary_notes or '' }}</textarea></div>
+    <div class="col-12"><button class="btn btn-primary" type="submit"><i class="bi bi-lock-fill ms-1"></i> ثبت snapshot صورتجلسه نهایی</button></div>
+  </form>
+</div>
+
+{% if saved_snapshot %}
+<div class="card p-3 p-lg-4 mb-4">
+  <h5 class="section-title"><i class="bi bi-archive-fill"></i> آخرین صورتجلسه نهایی ثبت‌شده</h5>
+  <div class="row g-3">
+    <div class="col-md-3"><div class="small text-muted">تاریخ صورتجلسه</div><strong>{{ control.final_summary_signed_on|fa_date if control.final_summary_signed_on else '—' }}</strong></div>
+    <div class="col-md-5"><div class="small text-muted">تأییدکننده/تنظیم‌کننده</div><strong>{{ control.final_summary_signed_by or '—' }}</strong></div>
+    <div class="col-md-4"><div class="small text-muted">زمان ثبت سیستمی</div><strong>{{ saved_snapshot.created_at or '—' }}</strong></div>
+    <div class="col-md-3"><div class="small text-muted">تعداد حواله در snapshot</div><strong>{{ saved_snapshot.voucher_count }}</strong></div>
+    <div class="col-md-3"><div class="small text-muted">وزن اسنادی snapshot</div><strong>{{ "{:,.0f}".format(saved_snapshot.document_weight_kg) }} کیلوگرم</strong></div>
+    <div class="col-md-3"><div class="small text-muted">وزن خالص snapshot</div><strong>{{ "{:,.0f}".format(saved_snapshot.net_scale_weight_kg) }} کیلوگرم</strong></div>
+    <div class="col-md-3"><div class="small text-muted">اختلاف کل snapshot</div><strong>{{ "{:,.0f}".format(saved_snapshot.weight_difference_kg) }} کیلوگرم</strong></div>
+    {% if control.final_summary_notes %}<div class="col-12"><div class="small text-muted">توضیحات ثبت‌شده</div><div>{{ control.final_summary_notes }}</div></div>{% endif %}
+  </div>
+  <div class="alert alert-warning mt-3 mb-0 small">اگر پس از این ثبت، حواله‌ای تغییر کند یا سرویس جدیدی اضافه شود، snapshot قبلی خودکار تغییر نمی‌کند؛ برای صورتجلسه جدید باید snapshot تازه ثبت شود.</div>
+</div>
+{% endif %}
+
+<div class="card mb-4">
+  <div class="p-3 p-lg-4 border-bottom" style="border-color:var(--line)!important">
+    <h5 class="fw-bold mb-1">ریز حواله‌ها و سرویس‌های حمل</h5>
+    <p class="small text-muted mb-0">هر ردیف یک سرویس مستقل است؛ قبض‌های وزن پُر و خالی باید به پرونده همان شماره حواله پیوست باشند.</p>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover table-sm">
+      <thead><tr><th>شماره حواله</th><th>پلاک</th><th>تاریخ/ساعت ورود</th><th>تاریخ/ساعت خروج</th><th>وزن اسنادی (kg)</th><th>وزن خالص باسکولی (kg)</th><th>اختلاف (kg)</th><th>توقف (ساعت)</th><th>قبض پُر/خالی</th><th>وضعیت / مغایرت</th><th class="no-print">جزئیات</th></tr></thead>
+      <tbody>
+      {% for h in items %}
+        <tr>
+          <td class="fw-bold text-nowrap">{{ h.shomare_havaleh }}</td>
+          <td class="text-nowrap">{{ h.pelak or '—' }}</td>
+          <td class="text-nowrap">{% if h.tarikh_vorud %}{{ h.tarikh_vorud|fa_date }}{% else %}—{% endif %} {{ h.saat_vorud.strftime('%H:%M') if h.saat_vorud else '' }}</td>
+          <td class="text-nowrap">{% if h.tarikh_khoruj %}{{ h.tarikh_khoruj|fa_date }}{% else %}—{% endif %} {{ h.saat_khoruj.strftime('%H:%M') if h.saat_khoruj else '' }}</td>
+          <td class="text-nowrap">{{ "{:,.0f}".format(h.vazn_esnadi) if h.vazn_esnadi is not none else '—' }}</td>
+          <td class="text-nowrap">{{ "{:,.0f}".format(h.vazn_khales) if h.vazn_khales is not none else '—' }}</td>
+          <td class="text-nowrap {% if h.ekhtelaf_vazn is not none and h.ekhtelaf_vazn != 0 %}text-danger fw-bold{% endif %}">{{ "{:,.0f}".format(h.ekhtelaf_vazn) if h.ekhtelaf_vazn is not none else '—' }}</td>
+          <td class="text-nowrap">{{ "{:,.2f}".format(h.moddat_tavaghof_saat) if h.moddat_tavaghof_saat is not none else '—' }}</td>
+          <td class="text-nowrap"><span class="badge {% if h.ghabz_por_file %}badge-ok{% else %}badge-incomplete{% endif %}">پُر: {{ 'ثبت' if h.ghabz_por_file else 'ندارد' }}</span> <span class="badge {% if h.ghabz_khali_file %}badge-ok{% else %}badge-incomplete{% endif %}">خالی: {{ 'ثبت' if h.ghabz_khali_file else 'ندارد' }}</span></td>
+          <td><div>{{ h.vaziyat_havaleh }}</div><small class="text-muted">{{ h.vaziyat_moghayerat }}{% if h.sharh_moghayerat %} · {{ h.sharh_moghayerat }}{% endif %}</small></td>
+          <td class="no-print"><a class="btn btn-sm btn-outline-primary" href="{{ url_for('havaleh.havaleh_edit', id=h.id) }}">مشاهده / ویرایش</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="11" class="text-center text-muted py-4">هنوز حواله‌ای ثبت نشده است.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
