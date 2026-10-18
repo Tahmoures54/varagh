@@ -28,9 +28,14 @@ from models import (
 
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
-# Vercel function bundles are read-only; /tmp is writable but not persistent.
-# Set VARAGH_DATA_DIR explicitly when using a mounted/persistent volume elsewhere.
-_default_data_dir = Path("/tmp/varagh-data") if os.environ.get("VERCEL") == "1" else BASE_DIR / "data"
+# Serverless (Vercel / Lambda) function bundles are read-only; /tmp is writable but not persistent.
+# Set VARAGH_DATA_DIR / VARAGH_UPLOAD_DIR explicitly when using a mounted/persistent volume.
+_is_serverless = bool(
+    os.environ.get("VERCEL") == "1"
+    or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+    or os.environ.get("FUNCTION_NAME")
+)
+_default_data_dir = Path("/tmp/varagh-data") if _is_serverless else BASE_DIR / "data"
 DATA_DIR = Path(os.environ.get("VARAGH_DATA_DIR") or _default_data_dir).resolve()
 UPLOAD_DIR = Path(os.environ.get("VARAGH_UPLOAD_DIR") or (DATA_DIR / "receipts")).resolve()
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024
@@ -39,14 +44,25 @@ STATUSES = ["ثبت‌شده", "در حال بررسی", "خارج‌شده", "�
 MOGHAYERAT = ["بدون مغایرت", "مغایرت مثبت", "مغایرت منفی", "نیازمند بررسی"]
 BALE_KHEYR = ["خیر", "بله"]
 
+def _normalize_database_url(url: str) -> str:
+    """Normalize DB URL for SQLAlchemy + psycopg (v3)."""
+    if not url:
+        return url
+    url = url.replace("postgres://", "postgresql://", 1)
+    if url.startswith("postgresql://") and "+psycopg" not in url.split("://", 1)[0]:
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
+
 
 def create_app(test_config=None):
     app = Flask(__name__)
     app.config.update(
         SECRET_KEY=os.environ.get("VARAGH_SECRET_KEY") or secrets.token_hex(32),
-        SQLALCHEMY_DATABASE_URI=os.environ.get(
-            "DATABASE_URL", f"sqlite:///{(DATA_DIR / 'varagh.db').as_posix()}"
-        ).replace("postgres://", "postgresql://", 1),
+        SQLALCHEMY_DATABASE_URI=_normalize_database_url(
+            os.environ.get(
+                "DATABASE_URL", f"sqlite:///{(DATA_DIR / 'varagh.db').as_posix()}"
+            )
+        ),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         MAX_CONTENT_LENGTH=MAX_UPLOAD_BYTES,
         SESSION_COOKIE_HTTPONLY=True,
@@ -57,8 +73,12 @@ def create_app(test_config=None):
     )
     if test_config:
         app.config.update(test_config)
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        # Read-only filesystem (e.g. some serverless cold starts); continue if paths already usable.
+        pass
     db.init_app(app)
 
     login_manager = LoginManager()
@@ -344,306 +364,220 @@ def create_app(test_config=None):
                 db.session.add(item)
                 db.session.flush()
                 apply_form(item, creating=True)
-                log_action("create", "Havaleh", item.id, f"شماره حواله={item.shomare_havaleh}")
+                log_action("create", "Havaleh", item.id, item.shomare_havaleh)
                 db.session.commit()
-                flash(f"حواله {item.shomare_havaleh} ثبت شد.", "success")
-                return redirect(url_for("havaleh_list"))
-            except (ValueError, IntegrityError) as exc:
+                flash("حواله با موفقیت ثبت شد.", "success")
+                return redirect(url_for("havaleh_edit", item_id=item.id))
+            except ValueError as exc:
                 db.session.rollback()
-                flash(str(exc) if isinstance(exc, ValueError) else "شماره حواله تکراری است؛ دوباره تلاش کنید.", "danger")
-        inventory = Inventory.query.order_by(Inventory.code_kala).all()
-        return render_template("havaleh_form.html", item=None, inventory=inventory, statuses=STATUSES,
-                               moghayerat_list=MOGHAYERAT, bale_kheyr=BALE_KHEYR)
+                flash(str(exc), "danger")
+            except IntegrityError:
+                db.session.rollback()
+                flash("شماره حواله تکراری است.", "danger")
+        return render_template("havaleh_form.html", item=item, statuses=STATUSES, moghayerat=MOGHAYERAT, creating=True)
 
-    def form_value_matches(field, current):
-        raw = (request.form.get(field) or "").strip()
-        if current is None:
-            return raw == ""
-        if isinstance(current, datetime):
-            current = current.date()
-        if isinstance(current, date):
-            return raw == current.isoformat()
-        if isinstance(current, time):
-            return raw == current.strftime("%H:%M")
-        if isinstance(current, bool):
-            return raw.lower() in ("1", "true", "on") if current else raw.lower() not in ("1", "true", "on")
-        if isinstance(current, (int, float)):
-            if not raw:
-                return False
-            try:
-                return float(raw) == float(current)
-            except ValueError:
-                return False
-        return raw == str(current)
-
-    def enforce_role_field_permissions(item):
-        fields = {
-            "tarikh_vorud": item.tarikh_vorud, "saat_vorud": item.saat_vorud,
-            "tarikh_khoruj": item.tarikh_khoruj, "saat_khoruj": item.saat_khoruj,
-            "vazn_esnadi": item.vazn_esnadi, "vazn_por": item.vazn_por,
-            "vazn_khali": item.vazn_khali, "code_kala": item.code_kala,
-            "tedad_baste": item.tedad_baste, "taeed_nahayi": item.taeed_nahayi,
-            "tarikh_taeed": item.tarikh_taeed,
-        }
-        if current_user.role == ROLE_HERASAT:
-            protected = ("vazn_esnadi", "vazn_por", "vazn_khali", "code_kala", "tedad_baste", "taeed_nahayi", "tarikh_taeed")
-        elif current_user.role == ROLE_ANBAR:
-            protected = ("tarikh_vorud", "saat_vorud", "tarikh_khoruj", "saat_khoruj", "taeed_nahayi", "tarikh_taeed")
-        elif current_user.role == ROLE_PROJECT:
-            protected = ("tarikh_vorud", "saat_vorud", "tarikh_khoruj", "saat_khoruj", "vazn_esnadi", "vazn_por", "vazn_khali", "code_kala", "tedad_baste")
-        else:
-            protected = ()
-        for field in protected:
-            if not form_value_matches(field, fields[field]):
-                raise ValueError("نقش کاربری شما اجازه تغییر یکی از فیلدهای ارسال‌شده را ندارد.")
-
-    @app.route("/havaleh/<int:id>/edit", methods=["GET", "POST"])
-    @require_roles(ROLE_ADMIN, ROLE_HERASAT, ROLE_ANBAR, ROLE_PROJECT)
-    def havaleh_edit(id):
-        item = db.get_or_404(Havaleh, id)
+    @app.route("/havaleh/<int:item_id>", methods=["GET", "POST"])
+    @login_required
+    def havaleh_edit(item_id):
+        item = db.session.get(Havaleh, item_id) or abort(404)
         if request.method == "POST":
+            if current_user.role == ROLE_VIEWER:
+                abort(403)
             try:
-                old_status = item.vaziyat_havaleh
-                enforce_role_field_permissions(item)
-                apply_form(item)
-                log_action("update", "Havaleh", item.id, f"وضعیت: {old_status} ← {item.vaziyat_havaleh}")
+                old_status = apply_form(item)
+                log_action("update", "Havaleh", item.id, f"{item.shomare_havaleh}; status={item.vaziyat_havaleh}")
                 db.session.commit()
-                flash("تغییرات حواله ذخیره شد.", "success")
-                return redirect(url_for("havaleh_list"))
-            except (ValueError, IntegrityError) as exc:
+                flash("تغییرات ذخیره شد.", "success")
+                return redirect(url_for("havaleh_edit", item_id=item.id))
+            except ValueError as exc:
                 db.session.rollback()
-                flash(str(exc) if isinstance(exc, ValueError) else "ذخیره تغییرات ناموفق بود.", "danger")
-        inventory = Inventory.query.order_by(Inventory.code_kala).all()
-        return render_template("havaleh_form.html", item=item, inventory=inventory, statuses=STATUSES,
-                               moghayerat_list=MOGHAYERAT, bale_kheyr=BALE_KHEYR)
+                flash(str(exc), "danger")
+            except IntegrityError:
+                db.session.rollback()
+                flash("خطای یکپارچگی پایگاه داده.", "danger")
+        return render_template("havaleh_form.html", item=item, statuses=STATUSES, moghayerat=MOGHAYERAT, creating=False)
 
-    @app.route("/havaleh/<int:id>/delete", methods=["POST"])
+    @app.route("/havaleh/<int:item_id>/delete", methods=["POST"])
     @require_roles(ROLE_ADMIN)
-    def havaleh_delete(id):
-        item = db.get_or_404(Havaleh, id)
+    def havaleh_delete(item_id):
+        item = db.session.get(Havaleh, item_id) or abort(404)
         if item.inventory_deducted:
-            flash("حواله‌ای که روی موجودی اثر گذاشته حذف نمی‌شود؛ برای اصلاح، با مدیر سامانه هماهنگ کنید.", "danger")
+            flash("حواله‌ای که از موجودی آن کسر شده قابل حذف نیست.", "danger")
             return redirect(url_for("havaleh_list"))
-        log_action("delete", "Havaleh", item.id, f"شماره حواله={item.shomare_havaleh}")
+        log_action("delete", "Havaleh", item.id, item.shomare_havaleh)
         db.session.delete(item)
         db.session.commit()
-        flash("حواله حذف شد.", "success")
+        flash("حواله حذف شد.", "info")
         return redirect(url_for("havaleh_list"))
 
-    @app.route("/users", methods=["GET", "POST"])
-    @require_roles(ROLE_ADMIN)
-    def users():
-        if request.method == "POST":
-            username = (request.form.get("username") or "").strip()
-            full_name = (request.form.get("full_name") or "").strip()[:120] or None
-            password = request.form.get("password") or ""
-            role = (request.form.get("role") or ROLE_VIEWER).strip()
-            if not username or len(username) > 80 or not username.replace("_", "").replace("-", "").isalnum():
-                flash("نام کاربری باید فقط شامل حروف انگلیسی، عدد، خط تیره یا زیرخط باشد.", "danger")
-            elif len(password) < 12:
-                flash("رمز عبور باید حداقل ۱۲ نویسه باشد.", "danger")
-            elif role not in (ROLE_ADMIN, ROLE_HERASAT, ROLE_ANBAR, ROLE_PROJECT, ROLE_VIEWER):
-                flash("نقش انتخاب‌شده معتبر نیست.", "danger")
-            elif User.query.filter_by(username=username).first():
-                flash("این نام کاربری قبلاً ثبت شده است.", "danger")
-            else:
-                user = User(username=username, full_name=full_name, role=role, is_active_user=True)
-                user.set_password(password)
-                db.session.add(user)
-                db.session.flush()
-                log_action("user_created", "User", user.id, f"username={username}; role={role}")
-                db.session.commit()
-                flash("کاربر جدید ساخته شد.", "success")
-                return redirect(url_for("users"))
-        users_list = User.query.order_by(User.username).all()
-        return render_template("users.html", users=users_list,
-                               roles={ROLE_ADMIN: "مدیر سیستم", ROLE_HERASAT: "حراست",
-                                      ROLE_ANBAR: "انبار", ROLE_PROJECT: "پروژه", ROLE_VIEWER: "مشاهده‌گر"})
-
-    @app.route("/users/<int:id>/toggle", methods=["POST"])
-    @require_roles(ROLE_ADMIN)
-    def user_toggle(id):
-        user = db.get_or_404(User, id)
-        if user.id == current_user.id:
-            flash("امکان غیرفعال‌کردن حساب خودتان وجود ندارد.", "danger")
-        else:
-            user.is_active_user = not user.is_active_user
-            log_action("user_enabled" if user.is_active_user else "user_disabled",
-                       "User", user.id, f"username={user.username}")
-            db.session.commit()
-            flash("وضعیت کاربر تغییر کرد.", "success")
-        return redirect(url_for("users"))
-
-    @app.route("/inventory/template.csv")
-    @require_roles(ROLE_ADMIN)
-    def inventory_template():
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["code_kala", "name_kala", "zekhamat", "moshakhasat", "vahed",
-                         "mojudi_vaghei", "tedad_sheet", "vazn_har_sheet", "vazn_goruh",
-                         "mogheiyat", "radif"])
-        response = make_response("\ufeff" + output.getvalue())
-        response.headers["Content-Type"] = "text/csv; charset=utf-8"
-        response.headers["Content-Disposition"] = "attachment; filename=varagh-inventory-template.csv"
-        return response
-
-    @app.route("/inventory/import", methods=["POST"])
-    @require_roles(ROLE_ADMIN)
-    def inventory_import():
-        upload = request.files.get("inventory_file")
-        if not upload or not upload.filename:
-            flash("فایل CSV یا XLSX موجودی را انتخاب کنید.", "danger")
-            return redirect(url_for("inventory_list"))
-        filename = secure_filename(upload.filename)
-        extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-        if extension not in ("csv", "xlsx"):
-            flash("فقط فایل CSV یا XLSX پذیرفته می‌شود.", "danger")
-            return redirect(url_for("inventory_list"))
-        try:
-            if extension == "csv":
-                rows = list(csv.DictReader(io.StringIO(upload.read().decode("utf-8-sig"))))
-            else:
-                from openpyxl import load_workbook
-                workbook = load_workbook(io.BytesIO(upload.read()), read_only=True, data_only=True)
-                sheet = workbook.active
-                values = sheet.iter_rows(values_only=True)
-                header = next(values, None)
-                if not header:
-                    raise ValueError("فایل اکسل خالی است.")
-                keys = [str(value or "").strip() for value in header]
-                rows = [dict(zip(keys, row)) for row in values if any(value is not None for value in row)]
-                workbook.close()
-            if not rows:
-                raise ValueError("فایل هیچ ردیف داده‌ای ندارد.")
-            if len(rows) > 5000:
-                raise ValueError("در هر بار حداکثر ۵۰۰۰ ردیف قابل ورود است.")
-            required = {"code_kala", "mojudi_vaghei"}
-            headers = {str(key).strip() for row in rows for key in row.keys() if key is not None}
-            if not required.issubset(headers):
-                raise ValueError("ستون‌های code_kala و mojudi_vaghei الزامی هستند؛ از فایل الگو استفاده کنید.")
-
-            def cell_text(value):
-                return str(value).strip() if value is not None else ""
-
-            def cell_number(value, field, row_number, required=False):
-                raw = cell_text(value).replace(",", "")
-                if not raw:
-                    if required:
-                        raise ValueError(f"ردیف {row_number}: مقدار {field} الزامی است.")
-                    return None
-                try:
-                    number = float(raw)
-                except (TypeError, ValueError):
-                    raise ValueError(f"ردیف {row_number}: مقدار {field} عدد معتبر نیست.")
-                if number < 0:
-                    raise ValueError(f"ردیف {row_number}: مقدار {field} نمی‌تواند منفی باشد.")
-                return number
-
-            prepared = []
-            seen = set()
-            for row_number, row in enumerate(rows, start=2):
-                record = {str(k).strip(): v for k, v in row.items() if k is not None}
-                code = cell_text(record.get("code_kala"))[:30]
-                if not code:
-                    raise ValueError(f"ردیف {row_number}: کد کالا الزامی است.")
-                spec = cell_text(record.get("moshakhasat"))[:200]
-                location = cell_text(record.get("mogheiyat"))[:200]
-                identity = (code, spec, location)
-                if identity in seen:
-                    raise ValueError(f"ردیف {row_number}: ترکیب کد کالا، مشخصات و موقعیت تکراری است.")
-                seen.add(identity)
-                prepared.append({
-                    "code_kala": code,
-                    "name_kala": cell_text(record.get("name_kala"))[:100] or None,
-                    "zekhamat": cell_number(record.get("zekhamat"), "zekhamat", row_number),
-                    "moshakhasat": spec or None,
-                    "vahed": cell_text(record.get("vahed"))[:20] or "کیلو گرم",
-                    "mojudi_vaghei": cell_number(record.get("mojudi_vaghei"), "mojudi_vaghei", row_number, True),
-                    "tedad_sheet": cell_number(record.get("tedad_sheet"), "tedad_sheet", row_number),
-                    "vazn_har_sheet": cell_number(record.get("vazn_har_sheet"), "vazn_har_sheet", row_number),
-                    "vazn_goruh": cell_number(record.get("vazn_goruh"), "vazn_goruh", row_number),
-                    "mogheiyat": location or None,
-                    "radif": int(cell_number(record.get("radif"), "radif", row_number)) if cell_text(record.get("radif")) else None,
-                })
-            changed = 0
-            for record in prepared:
-                query = Inventory.query.filter_by(
-                    code_kala=record["code_kala"],
-                    moshakhasat=record["moshakhasat"],
-                    mogheiyat=record["mogheiyat"],
-                )
-                item = query.first()
-                if item is None:
-                    item = Inventory(**record)
-                    db.session.add(item)
-                else:
-                    for key, value in record.items():
-                        setattr(item, key, value)
-                changed += 1
-            log_action("inventory_import", "Inventory", None, f"ردیف‌های ثبت/به‌روزرسانی‌شده={changed}")
-            db.session.commit()
-            flash(f"ورود موجودی انجام شد؛ {changed} ردیف ثبت یا به‌روزرسانی شد.", "success")
-        except (ValueError, UnicodeDecodeError, csv.Error) as exc:
-            db.session.rollback()
-            flash(str(exc), "danger")
-        except Exception:
-            db.session.rollback()
-            app.logger.exception("Inventory import failed")
-            flash("ورود فایل ناموفق بود؛ ساختار فایل را بررسی کنید.", "danger")
-        return redirect(url_for("inventory_list"))
+    @app.route("/receipts/<path:filename>")
+    @login_required
+    def receipt_file(filename):
+        return send_from_directory(UPLOAD_DIR, filename)
 
     @app.route("/inventory")
     @login_required
     def inventory_list():
-        items = Inventory.query.order_by(Inventory.code_kala, Inventory.id).all()
-        total_kg = sum((i.mojudi_vaghei or 0) for i in items)
-        unique_count = len({i.code_kala for i in items})
-        return render_template("inventory.html", items=items, total_kg=total_kg, unique_count=unique_count)
+        q = (request.args.get("q") or "").strip()[:100]
+        query = Inventory.query
+        if q:
+            like = f"%{q}%"
+            query = query.filter(or_(
+                Inventory.code_kala.ilike(like), Inventory.name_kala.ilike(like),
+                Inventory.moshakhasat.ilike(like), Inventory.mahal.ilike(like),
+            ))
+        items = query.order_by(Inventory.code_kala).limit(2000).all()
+        return render_template("inventory.html", items=items, q=q)
 
-    @app.route("/export/excel")
-    @login_required
-    def export_excel():
+    @app.route("/inventory/import", methods=["POST"])
+    @require_roles(ROLE_ADMIN)
+    def inventory_import():
+        upload = request.files.get("file")
+        if not upload or not upload.filename:
+            flash("فایل انتخاب نشده است.", "danger")
+            return redirect(url_for("inventory_list"))
+        name = secure_filename(upload.filename).lower()
         try:
-            from openpyxl import Workbook
-            from openpyxl.styles import Font, PatternFill
-        except ImportError:
-            abort(500, description="کتابخانه خروجی اکسل نصب نشده است.")
+            if name.endswith(".csv"):
+                stream = io.TextIOWrapper(upload.stream, encoding="utf-8-sig")
+                reader = csv.DictReader(stream)
+                rows = list(reader)
+            elif name.endswith((".xlsx", ".xls")):
+                from openpyxl import load_workbook
+                wb = load_workbook(upload, read_only=True, data_only=True)
+                ws = wb.active
+                headers = [str(c.value or "").strip() for c in next(ws.iter_rows(max_row=1))]
+                rows = []
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    rows.append({headers[i]: row[i] for i in range(len(headers))})
+            else:
+                flash("فقط CSV یا Excel پذیرفته می‌شود.", "danger")
+                return redirect(url_for("inventory_list"))
+            if len(rows) > 5000:
+                flash("حداکثر ۵۰۰۰ ردیف در هر بار مجاز است.", "danger")
+                return redirect(url_for("inventory_list"))
+            created = updated = 0
+            for raw in rows:
+                code = str(raw.get("code_kala") or raw.get("کد کالا") or "").strip()[:30]
+                if not code:
+                    continue
+                name_kala = str(raw.get("name_kala") or raw.get("نام کالا") or "").strip()[:200] or None
+                moshakhasat = str(raw.get("moshakhasat") or raw.get("مشخصات") or "").strip()[:200] or None
+                mahal = str(raw.get("mahal") or raw.get("موقعیت") or "").strip()[:100] or None
+                try:
+                    mojudi = float(str(raw.get("mojudi_vaghei") or raw.get("موجودی واقعی") or "0").replace(",", ""))
+                except ValueError:
+                    mojudi = 0.0
+                existing = Inventory.query.filter_by(code_kala=code, moshakhasat=moshakhasat, mahal=mahal).first()
+                if existing:
+                    existing.name_kala = name_kala
+                    existing.mojudi_vaghei = mojudi
+                    updated += 1
+                else:
+                    db.session.add(Inventory(
+                        code_kala=code, name_kala=name_kala, moshakhasat=moshakhasat,
+                        mahal=mahal, mojudi_vaghei=mojudi,
+                    ))
+                    created += 1
+            db.session.commit()
+            log_action("inventory_import", "Inventory", None, f"created={created}; updated={updated}")
+            flash(f"واردات انجام شد: {created} جدید، {updated} به‌روزرسانی.", "success")
+        except Exception as exc:
+            db.session.rollback()
+            flash(f"خطا در واردات: {exc}", "danger")
+        return redirect(url_for("inventory_list"))
+
+    @app.route("/inventory/template")
+    @require_roles(ROLE_ADMIN)
+    def inventory_template():
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["code_kala", "name_kala", "moshakhasat", "mahal", "mojudi_vaghei"])
+        writer.writerow(["EXAMPLE-001", "ورق نمونه", "ST37 2mm", "انبار A", "1000"])
+        resp = make_response(output.getvalue())
+        resp.headers["Content-Type"] = "text/csv; charset=utf-8-sig"
+        resp.headers["Content-Disposition"] = "attachment; filename=inventory_template.csv"
+        return resp
+
+    @app.route("/users")
+    @require_roles(ROLE_ADMIN)
+    def users_list():
+        users = User.query.order_by(User.username).all()
+        return render_template("users.html", users=users, roles=ROLES)
+
+    @app.route("/users/new", methods=["POST"])
+    @require_roles(ROLE_ADMIN)
+    def users_new():
+        username = (request.form.get("username") or "").strip()[:80]
+        password = request.form.get("password") or ""
+        full_name = (request.form.get("full_name") or "").strip()[:120] or None
+        role = (request.form.get("role") or ROLE_VIEWER).strip()
+        if role not in ROLES:
+            flash("نقش معتبر نیست.", "danger")
+            return redirect(url_for("users_list"))
+        if len(password) < 12:
+            flash("رمز عبور باید حداقل ۱۲ نویسه باشد.", "danger")
+            return redirect(url_for("users_list"))
+        if not username or User.query.filter_by(username=username).first():
+            flash("نام کاربری خالی یا تکراری است.", "danger")
+            return redirect(url_for("users_list"))
+        user = User(username=username, full_name=full_name, role=role)
+        user.set_password(password)
+        db.session.add(user)
+        log_action("user_create", "User", None, username)
+        db.session.commit()
+        flash("کاربر ایجاد شد.", "success")
+        return redirect(url_for("users_list"))
+
+    @app.route("/users/<int:user_id>/toggle", methods=["POST"])
+    @require_roles(ROLE_ADMIN)
+    def users_toggle(user_id):
+        user = db.session.get(User, user_id) or abort(404)
+        if user.username == "admin" and user.is_active_user:
+            flash("حساب مدیر اصلی را نمی‌توان غیرفعال کرد.", "danger")
+            return redirect(url_for("users_list"))
+        user.is_active_user = not user.is_active_user
+        log_action("user_toggle", "User", user.id, f"{user.username} -> {user.is_active_user}")
+        db.session.commit()
+        flash("وضعیت کاربر به‌روز شد.", "info")
+        return redirect(url_for("users_list"))
+
+    @app.route("/export/havaleh")
+    @require_roles(ROLE_ADMIN, ROLE_PROJECT, ROLE_VIEWER)
+    def export_havaleh():
+        from openpyxl import Workbook
         wb = Workbook()
         ws = wb.active
-        ws.title = "حواله‌ها"
-        headers = ["شماره حواله", "تاریخ حواله", "پلاک", "نام راننده", "شرح کالا", "مشخصات ورق", "کد کالا", "تعداد بسته", "وزن اسنادی", "وزن پر", "وزن خالی", "وزن خالص", "اختلاف وزن", "تاریخ ورود", "ساعت ورود", "تاریخ خروج", "ساعت خروج", "وضعیت", "مغایرت", "قبض پر", "قبض خالی", "توضیحات"]
+        ws.title = "Havaleh"
+        headers = [
+            "شماره حواله", "تاریخ", "پلاک", "راننده", "موبایل", "شرح کالا", "مشخصات",
+            "کد کالا", "تعداد بسته", "وزن اسنادی", "ورود", "خروج", "وزن پُر", "وزن خالی",
+            "وزن خالص", "وضعیت", "مغایرت", "توضیحات",
+        ]
         ws.append(headers)
-        for cell in ws[1]:
-            cell.font = Font(bold=True, color="FFFFFF")
-            cell.fill = PatternFill("solid", fgColor="1F4E79")
-        for h in Havaleh.query.order_by(Havaleh.created_at.desc()).all():
-            ws.append([h.shomare_havaleh, h.tarikh_havaleh.isoformat() if h.tarikh_havaleh else "", h.pelak, h.name_ranande, h.sharh_kala, h.moshakhasat_varagh, h.code_kala, h.tedad_baste, h.vazn_esnadi, h.vazn_por, h.vazn_khali, h.vazn_khales, h.ekhtelaf_vazn, h.tarikh_vorud.isoformat() if h.tarikh_vorud else "", h.saat_vorud.strftime("%H:%M") if h.saat_vorud else "", h.tarikh_khoruj.isoformat() if h.tarikh_khoruj else "", h.saat_khoruj.strftime("%H:%M") if h.saat_khoruj else "", h.vaziyat_havaleh, h.vaziyat_moghayerat, h.ghabz_por_piost, h.ghabz_khali_piost, h.tozihat])
-        ws.freeze_panes = "A2"
-        ws.auto_filter.ref = ws.dimensions
-        for col in ws.columns:
-            width = min(max(max(len(str(c.value or "")) for c in col) + 2, 12), 32)
-            ws.column_dimensions[col[0].column_letter].width = width
-        output = io.BytesIO()
-        wb.save(output)
-        response = make_response(output.getvalue())
-        response.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        response.headers["Content-Disposition"] = "attachment; filename=varagh-havaleh.xlsx"
-        return response
-
-    @app.route("/receipts/<path:filename>")
-    @login_required
-    def receipt_download(filename):
-        if filename != secure_filename(filename) or "/" in filename or "\\" in filename:
-            abort(404)
-        return send_from_directory(UPLOAD_DIR, filename, as_attachment=True, max_age=0)
+        for h in Havaleh.query.order_by(Havaleh.created_at.desc()).limit(5000).all():
+            ws.append([
+                h.shomare_havaleh, h.tarikh_havaleh, h.pelak, h.name_ranande, h.mobile_ranande,
+                h.sharh_kala, h.moshakhasat_varagh, h.code_kala, h.tedad_baste, h.vazn_esnadi,
+                f"{h.tarikh_vorud} {h.saat_vorud or ''}".strip(),
+                f"{h.tarikh_khoruj} {h.saat_khoruj or ''}".strip(),
+                h.vazn_por, h.vazn_khali, h.vazn_khales, h.vaziyat_havaleh, h.vaziyat_moghayerat, h.tozihat,
+            ])
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        resp = make_response(buf.read())
+        resp.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        resp.headers["Content-Disposition"] = "attachment; filename=havaleh_export.xlsx"
+        return resp
 
     @app.errorhandler(403)
     def forbidden(_error):
-        return render_template("error.html", code=403, message="شما مجوز انجام این عملیات را ندارید."), 403
+        return render_template("error.html", code=403, message="دسترسی مجاز نیست."), 403
 
     @app.errorhandler(404)
     def not_found(_error):
-        return render_template("error.html", code=404, message="صفحه یا فایل موردنظر پیدا نشد."), 404
+        return render_template("error.html", code=404, message="صفحه پیدا نشد."), 404
 
     @app.errorhandler(413)
     def too_large(_error):
@@ -659,11 +593,15 @@ def create_app(test_config=None):
         if User.query.count() == 0:
             bootstrap_password = os.environ.get("VARAGH_ADMIN_PASSWORD")
             if bootstrap_password and len(bootstrap_password) >= 12:
-                admin = User(username=os.environ.get("VARAGH_ADMIN_USERNAME", "admin"),
-                             full_name="مدیر سامانه", role=ROLE_ADMIN, is_active_user=True)
+                admin = User(
+                    username=os.environ.get("VARAGH_ADMIN_USERNAME", "admin"),
+                    full_name="مدیر سیستم",
+                    role=ROLE_ADMIN,
+                )
                 admin.set_password(bootstrap_password)
                 db.session.add(admin)
                 db.session.commit()
+
     return app
 
 
