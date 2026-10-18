@@ -68,6 +68,8 @@ class Havaleh(db.Model):
     shomare_havaleh = db.Column(db.String(50), unique=True, nullable=False, index=True)
     tarikh_havaleh = db.Column(db.Date, nullable=True)
     pelak = db.Column(db.String(20), nullable=True)
+    noe_vasileh = db.Column(db.String(30), nullable=True)
+    pelak_trailer = db.Column(db.String(20), nullable=True)
     name_ranande = db.Column(db.String(100), nullable=True)
     mobile_ranande = db.Column(db.String(20), nullable=True)
     sharh_kala = db.Column(db.String(100), nullable=True)
