@@ -7,7 +7,8 @@
   {% if item %}ویرایش حواله {{ item.shomare_havaleh }}{% else %}ثبت حواله جدید{% endif %}
 </h4>
 
-<form method="post" class="card p-4">
+<form method="post" enctype="multipart/form-data" class="card p-4">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
   <div class="section-title">الف) اطلاعات حواله و وسیله نقلیه</div>
   <div class="row g-3 mb-4">
     <div class="col-md-3">
@@ -45,6 +46,11 @@
     <div class="col-md-2">
       <label class="form-label">تعداد بسته</label>
       <input type="number" name="tedad_baste" class="form-control" value="{{ item.tedad_baste if item else '' }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">کد کالا در ایندکس موجودی</label>
+      <input type="text" name="code_kala" class="form-control" list="code-list" value="{{ item.code_kala if item else '' }}">
+      <datalist id="code-list">{% for inv in inventory %}<option value="{{ inv.code_kala }}">{{ inv.name_kala or inv.moshakhasat or inv.code_kala }}</option>{% endfor %}</datalist>
     </div>
     <div class="col-md-3">
       <label class="form-label">وزن اسنادی (کیلوگرم)</label>
@@ -106,6 +112,16 @@
       <input type="text" class="form-control" readonly value="{% if item.darsad_ekhtelaf is not none %}{{ item.darsad_ekhtelaf }} %{% else %}—{% endif %}">
     </div>
     {% endif %}
+    <div class="col-md-3">
+      <label class="form-label">فایل قبض وزن پُر (PDF/تصویر، حداکثر ۸MB)</label>
+      <input type="file" name="ghabz_por_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp">
+      {% if item and item.ghabz_por_file %}<a href="{{ url_for('receipt_download', filename=item.ghabz_por_file) }}" target="_blank" rel="noopener">مشاهده قبض ثبت‌شده</a>{% endif %}
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">فایل قبض وزن خالی (PDF/تصویر، حداکثر ۸MB)</label>
+      <input type="file" name="ghabz_khali_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp">
+      {% if item and item.ghabz_khali_file %}<a href="{{ url_for('receipt_download', filename=item.ghabz_khali_file) }}" target="_blank" rel="noopener">مشاهده قبض ثبت‌شده</a>{% endif %}
+    </div>
     <div class="col-md-3">
       <label class="form-label">قبض وزن پُر پیوست شد؟</label>
       <select name="ghabz_por_piost" class="form-select">{% for v in bale_kheyr %}<option value="{{ v }}" {% if item and item.ghabz_por_piost == v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
