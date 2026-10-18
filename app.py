@@ -836,32 +836,37 @@ def create_app(test_config=None):
                 db.session.execute(text(f"ALTER TABLE havaleh ADD COLUMN {column_name} {column_type}"))
         db.session.commit()
         # Import the supplied initial inventory idempotently without overwriting staff-maintained records.
-        seed_path = BASE_DIR / "data" / "initial_inventory.csv"
-        if seed_path.is_file() and not app.config.get("TESTING"):
-            with seed_path.open("r", encoding="utf-8-sig", newline="") as seed_file:
-                for record in csv.DictReader(seed_file):
-                    code = (record.get("code_kala") or "").strip()
-                    spec = (record.get("moshakhasat") or "").strip() or None
-                    location = (record.get("mogheiyat") or "").strip() or None
-                    if not code or Inventory.query.filter_by(code_kala=code, moshakhasat=spec, mogheiyat=location).first():
-                        continue
-                    def seed_num(key):
-                        raw = (record.get(key) or "").strip().replace(",", "")
-                        return float(raw) if raw else None
-                    db.session.add(Inventory(
-                        radif=int(seed_num("radif") or 0) or None,
-                        code_kala=code[:30],
-                        name_kala=(record.get("name_kala") or "").strip()[:100] or None,
-                        zekhamat=seed_num("zekhamat"),
-                        moshakhasat=spec,
-                        vahed=(record.get("vahed") or "کیلو گرم").strip()[:20],
-                        mojudi_vaghei=seed_num("mojudi_vaghei"),
-                        tedad_sheet=seed_num("tedad_sheet"),
-                        vazn_har_sheet=seed_num("vazn_har_sheet"),
-                        vazn_goruh=seed_num("vazn_goruh"),
-                        mogheiyat=location,
-                    ))
-            db.session.commit()
+        try:
+            seed_path = BASE_DIR / "data" / "initial_inventory.csv"
+            if seed_path.is_file() and not app.config.get("TESTING"):
+                with seed_path.open("r", encoding="utf-8-sig", newline="") as seed_file:
+                    for record in csv.DictReader(seed_file):
+                        code = (record.get("code_kala") or "").strip()
+                        spec = (record.get("moshakhasat") or "").strip() or None
+                        location = (record.get("mogheiyat") or "").strip() or None
+                        if not code or Inventory.query.filter_by(code_kala=code, moshakhasat=spec, mogheiyat=location).first():
+                            continue
+                        def seed_num(key):
+                            raw = (record.get(key) or "").strip().replace(",", "")
+                            return float(raw) if raw else None
+                        db.session.add(Inventory(
+                            radif=int(seed_num("radif") or 0) or None,
+                            code_kala=code[:30],
+                            name_kala=(record.get("name_kala") or "").strip()[:100] or None,
+                            zekhamat=seed_num("zekhamat"),
+                            moshakhasat=spec,
+                            vahed=(record.get("vahed") or "کیلو گرم").strip()[:20],
+                            mojudi_vaghei=seed_num("mojudi_vaghei"),
+                            tedad_sheet=seed_num("tedad_sheet"),
+                            vazn_har_sheet=seed_num("vazn_har_sheet"),
+                            vazn_goruh=seed_num("vazn_goruh"),
+                            mogheiyat=location,
+                        ))
+                db.session.commit()
+
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Initial inventory import failed; application startup will continue.")
         # Admin phone and password are configured only through Vercel environment variables.
         # The one-time rename migrates the existing admin account without deleting app data.
         admin_phone = (os.environ.get("VARAGH_ADMIN_PHONE") or "").strip()
