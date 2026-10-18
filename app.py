@@ -18,7 +18,7 @@ from flask import (
     send_from_directory, session, url_for,
 )
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
-from sqlalchemy import or_
+from sqlalchemy import inspect as sqlalchemy_inspect, or_, text
 from sqlalchemy.exc import IntegrityError, OperationalError
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -240,6 +240,8 @@ def create_app(test_config=None):
                 raise ValueError("حواله‌ای که از موجودی آن کسر شده، قابل تغییر در وضعیت یا اطلاعات اثرگذار بر موجودی نیست.")
         item.tarikh_havaleh = parse_date("tarikh_havaleh")
         item.pelak = (request.form.get("pelak") or "").strip()[:20] or None
+        item.noe_vasileh = (request.form.get("noe_vasileh") or "").strip()[:30] or None
+        item.pelak_trailer = (request.form.get("pelak_trailer") or "").strip()[:20] or None
         item.name_ranande = (request.form.get("name_ranande") or "").strip()[:100] or None
         item.mobile_ranande = (request.form.get("mobile_ranande") or "").strip()[:20] or None
         item.sharh_kala = (request.form.get("sharh_kala") or "").strip()[:100] or None
@@ -818,6 +820,13 @@ def create_app(test_config=None):
 
     with app.app_context():
         db.create_all()
+        # Backward-compatible additive migration for vehicle details on existing databases.
+        # Only fixed, developer-defined identifiers are used in this DDL.
+        existing_columns = {column["name"] for column in sqlalchemy_inspect(db.engine).get_columns("havaleh")}
+        for column_name in ("noe_vasileh", "pelak_trailer"):
+            if column_name not in existing_columns:
+                db.session.execute(text(f"ALTER TABLE havaleh ADD COLUMN {column_name} VARCHAR(30)"))
+        db.session.commit()
         # Admin phone and password are configured only through Vercel environment variables.
         # The one-time rename migrates the existing admin account without deleting app data.
         admin_phone = (os.environ.get("VARAGH_ADMIN_PHONE") or "").strip()
