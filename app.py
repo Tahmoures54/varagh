@@ -837,7 +837,7 @@ def create_app(test_config=None):
         db.session.commit()
         # Import the supplied initial inventory idempotently without overwriting staff-maintained records.
         seed_path = BASE_DIR / "data" / "initial_inventory.csv"
-        if seed_path.is_file():
+        if seed_path.is_file() and not app.config.get("TESTING"):
             with seed_path.open("r", encoding="utf-8-sig", newline="") as seed_file:
                 for record in csv.DictReader(seed_file):
                     code = (record.get("code_kala") or "").strip()
