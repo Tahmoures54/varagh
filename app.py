@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import os
 import re
 import secrets
@@ -23,7 +24,7 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
 from models import (
-    AuditLog, Havaleh, Inventory, SerialCounter, User, db,
+    AuditLog, Havaleh, Inventory, SerialCounter, TransferControl, User, db,
     ROLE_ADMIN, ROLE_ANBAR, ROLE_HERASAT, ROLE_PROJECT, ROLE_VIEWER,
 )
 
@@ -684,6 +685,92 @@ def create_app(test_config=None):
         response.headers["Content-Type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         response.headers["Content-Disposition"] = "attachment; filename=varagh-havaleh.xlsx"
         return response
+
+    @reports_bp.route("/reconciliation", methods=["GET", "POST"])
+    @require_roles(ROLE_ADMIN, ROLE_PROJECT)
+    def reconciliation():
+        control = db.session.get(TransferControl, 1)
+        if control is None:
+            control = TransferControl(id=1)
+            db.session.add(control)
+            db.session.commit()
+
+        if request.method == "POST":
+            action = (request.form.get("action") or "").strip()
+            try:
+                if action == "save_valuation":
+                    control.agreement_signed_on = parse_date("agreement_signed_on")
+                    control.valuation_announced_on = parse_date("valuation_announced_on")
+                    control.valuation_price_per_kg = parse_float("valuation_price_per_kg", "قیمت کارشناسی هر کیلوگرم")
+                    control.valuation_reference = (request.form.get("valuation_reference") or "").strip()[:300] or None
+                    if control.valuation_announced_on and control.valuation_price_per_kg is None:
+                        raise ValueError("برای ثبت تاریخ اعلام قیمت، مبلغ کارشناسی هر کیلوگرم را نیز وارد کنید.")
+                    log_action("valuation_updated", "TransferControl", 1,
+                               f"تاریخ اعلام={control.valuation_announced_on}; قیمت هر کیلوگرم={control.valuation_price_per_kg}")
+                    db.session.commit()
+                    flash("اطلاعات کارشناسی و تاریخ‌های مربوط ذخیره شد.", "success")
+                elif action == "finalize_summary":
+                    items = Havaleh.query.order_by(Havaleh.shomare_havaleh).all()
+                    durations = [h.moddat_tavaghof_saat for h in items
+                                 if h.moddat_tavaghof_saat is not None and h.moddat_tavaghof_saat >= 0]
+                    snapshot = {
+                        "created_at": datetime.utcnow().isoformat(timespec="seconds"),
+                        "voucher_count": len(items),
+                        "completed_count": sum(h.vaziyat_havaleh == "تکمیل‌شده" for h in items),
+                        "document_weight_kg": round(sum(h.vazn_esnadi or 0 for h in items), 2),
+                        "net_scale_weight_kg": round(sum(h.vazn_khales or 0 for h in items if h.vazn_khales is not None), 2),
+                        "weight_difference_kg": round(sum(h.ekhtelaf_vazn or 0 for h in items), 2),
+                        "duration_hours": round(sum(durations), 2),
+                        "missing_full_receipt": sum(not h.ghabz_por_file for h in items),
+                        "missing_empty_receipt": sum(not h.ghabz_khali_file for h in items),
+                        "incomplete_or_review": sum(h.vaziyat_havaleh in ("ناقص", "نیازمند بررسی")
+                                                     or h.vaziyat_moghayerat != "بدون مغایرت"
+                                                     or h.vazn_khales is None for h in items),
+                        "voucher_numbers": [h.shomare_havaleh for h in items],
+                    }
+                    control.final_summary_signed_on = parse_date("final_summary_signed_on")
+                    control.final_summary_signed_by = (request.form.get("final_summary_signed_by") or "").strip()[:200] or None
+                    control.final_summary_notes = (request.form.get("final_summary_notes") or "").strip()[:2000] or None
+                    if not control.final_summary_signed_on or not control.final_summary_signed_by:
+                        raise ValueError("برای ثبت صورتجلسه نهایی، تاریخ و نام/سمت تأییدکننده را وارد کنید.")
+                    control.final_summary_snapshot = json.dumps(snapshot, ensure_ascii=False)
+                    log_action("final_reconciliation_saved", "TransferControl", 1,
+                               f"تاریخ={control.final_summary_signed_on}; تأییدکننده={control.final_summary_signed_by}; تعداد حواله={len(items)}")
+                    db.session.commit()
+                    flash("صورتجلسه نهایی با snapshot مقادیر فعلی ثبت شد. برای تغییرات بعدی، گزارش جدید را جداگانه ثبت کنید.", "success")
+                else:
+                    raise ValueError("عملیات درخواستی معتبر نیست.")
+            except (ValueError, IntegrityError) as exc:
+                db.session.rollback()
+                flash(str(exc) if isinstance(exc, ValueError) else "ذخیره اطلاعات ناموفق بود؛ دوباره تلاش کنید.", "danger")
+            return redirect(url_for("reports.reconciliation"))
+
+        items = Havaleh.query.order_by(Havaleh.created_at.desc()).all()
+        durations = [h.moddat_tavaghof_saat for h in items
+                     if h.moddat_tavaghof_saat is not None and h.moddat_tavaghof_saat >= 0]
+        stats = {
+            "total": len(items),
+            "completed": sum(h.vaziyat_havaleh == "تکمیل‌شده" for h in items),
+            "incomplete": sum(h.vaziyat_havaleh == "ناقص" for h in items),
+            "review": sum(h.vaziyat_havaleh == "نیازمند بررسی" or h.vaziyat_moghayerat != "بدون مغایرت" for h in items),
+            "document_weight": round(sum(h.vazn_esnadi or 0 for h in items), 2),
+            "net_weight": round(sum(h.vazn_khales or 0 for h in items if h.vazn_khales is not None), 2),
+            "difference": round(sum(h.ekhtelaf_vazn or 0 for h in items), 2),
+            "duration": round(sum(durations), 2),
+            "missing_full": sum(not h.ghabz_por_file for h in items),
+            "missing_empty": sum(not h.ghabz_khali_file for h in items),
+            "missing_times": sum(not all([h.tarikh_vorud, h.saat_vorud, h.tarikh_khoruj, h.saat_khoruj]) for h in items),
+        }
+        valuation_overdue = bool(
+            control.agreement_signed_on and not control.valuation_announced_on
+            and (date.today() - control.agreement_signed_on).days > 30
+        )
+        try:
+            saved_snapshot = json.loads(control.final_summary_snapshot) if control.final_summary_snapshot else None
+        except (TypeError, json.JSONDecodeError):
+            saved_snapshot = None
+        return render_template("reconciliation.html", control=control, items=items, stats=stats,
+                               valuation_overdue=valuation_overdue, saved_snapshot=saved_snapshot)
 
     @reports_bp.route("/receipts/<path:filename>")
     @login_required
