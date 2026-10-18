@@ -75,6 +75,7 @@ class Havaleh(db.Model):
     sharh_kala = db.Column(db.String(100), nullable=True)
     moshakhasat_varagh = db.Column(db.String(200), nullable=True)
     code_kala = db.Column(db.String(30), nullable=True, index=True)
+    mogheiyat_varagh = db.Column(db.String(200), nullable=True)
     tedad_baste = db.Column(db.Integer, nullable=True)
     vazn_esnadi = db.Column(db.Float, nullable=True)
     tarikh_vorud = db.Column(db.Date, nullable=True)
