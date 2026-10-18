@@ -19,6 +19,7 @@ from flask_login import LoginManager, current_user, login_required, login_user, 
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
 
 from models import (
     AuditLog, Havaleh, Inventory, SerialCounter, User, db,
@@ -26,6 +27,7 @@ from models import (
 )
 
 BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
 DATA_DIR = Path(os.environ.get("VARAGH_DATA_DIR", BASE_DIR / "data")).resolve()
 UPLOAD_DIR = Path(os.environ.get("VARAGH_UPLOAD_DIR", DATA_DIR / "receipts")).resolve()
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024
