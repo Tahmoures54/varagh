@@ -1,65 +1,317 @@
 {% extends "base.html" %}
 {% block title %}مدیریت کاربران{% endblock %}
+
+{% block extra_css %}
+<style>
+  .pw-wrap { position: relative; }
+  .pw-wrap .form-control { padding-inline-end: 5.5rem; }
+  .pw-actions {
+    position: absolute;
+    inset-inline-end: .4rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: .15rem;
+  }
+  .pw-actions button {
+    border: 0;
+    background: transparent;
+    color: #6c7f91;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    cursor: pointer;
+  }
+  .pw-actions button:hover { color: var(--teal-dark); background: #f0f6f5; }
+  .pw-actions button:focus-visible {
+    outline: 3px solid rgba(8,127,123,.45);
+    outline-offset: 2px;
+  }
+  .pw-hint { font-size: .72rem; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="page-heading"><div class="heading-group"><span class="heading-icon"><i class="bi bi-people-fill"></i></span><div><h4>مدیریت کاربران</h4><p>ساخت حساب‌های کاربری و کنترل دسترسی نقش‌ها</p></div></div></div>
+{# ---------- ماکرو برای لیبل با شناسه ---------- #}
+{%- macro label_for(id, text) -%}
+  <label class="form-label" for="{{ id }}">{{ text }}</label>
+{%- endmacro -%}
+
+<div class="page-heading">
+  <div class="heading-group">
+    <span class="heading-icon" aria-hidden="true">
+      <i class="bi bi-people-fill"></i>
+    </span>
+    <div>
+      <h4>مدیریت کاربران</h4>
+      <p>ساخت حساب‌های کاربری و کنترل دسترسی نقش‌ها</p>
+    </div>
+  </div>
+</div>
+
 <div class="row g-3">
+  <!-- ==================== ایجاد کاربر ==================== -->
   <div class="col-lg-4">
     <div class="card p-3 p-lg-4">
-      <h6 class="mb-3">ایجاد حساب کاربری</h6>
-      <form method="post">
+      <h2 class="h6 mb-3">ایجاد حساب کاربری</h2>
+
+      <form method="post" id="form-create-user" novalidate>
         <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
         <div class="mb-3">
-          <label class="form-label">نام کاربری انگلیسی</label>
-          <input class="form-control" name="username" required maxlength="80" pattern="[A-Za-z0-9_-]+" autocomplete="off">
+          {{ label_for('new-username', 'نام کاربری انگلیسی') }}
+          <input id="new-username" class="form-control" dir="ltr"
+                 name="username" required maxlength="80"
+                 pattern="[A-Za-z0-9_-]+"
+                 title="فقط حروف انگلیسی، ارقام، خط تیره و آندرلاین"
+                 autocapitalize="none" spellcheck="false"
+                 autocomplete="off"
+                 aria-describedby="hint-username">
+          <div id="hint-username" class="form-text pw-hint">
+            فقط حروف کوچک/بزرگ انگلیسی، ارقام، `_` و `-`. نمونه: `ali_karimi`
+          </div>
         </div>
+
         <div class="mb-3">
-          <label class="form-label">نام و نام خانوادگی</label>
-          <input class="form-control" name="full_name" maxlength="120">
+          {{ label_for('new-full-name', 'نام و نام خانوادگی') }}
+          <input id="new-full-name" class="form-control"
+                 name="full_name" maxlength="120"
+                 autocomplete="name">
         </div>
+
         <div class="mb-3">
-          <label class="form-label">رمز عبور اولیه (حداقل ۱۲ نویسه)</label>
-          <input class="form-control" type="password" name="password" required minlength="12" autocomplete="new-password">
+          {{ label_for('new-password', 'رمز عبور اولیه (حداقل ۱۲ نویسه)') }}
+          <div class="pw-wrap">
+            <input id="new-password" class="form-control" dir="ltr"
+                   type="password" name="password" required
+                   minlength="12" maxlength="128"
+                   autocomplete="new-password"
+                   aria-describedby="hint-password">
+            <div class="pw-actions">
+              <button type="button" id="btn-generate-pw"
+                      title="تولید رمز تصادفی"
+                      aria-label="تولید رمز تصادفی">
+                <i class="bi bi-magic" aria-hidden="true"></i>
+              </button>
+              <button type="button" id="btn-toggle-pw"
+                      aria-controls="new-password"
+                      aria-pressed="false"
+                      aria-label="نمایش رمز عبور">
+                <i class="bi bi-eye" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <div id="hint-password" class="form-text pw-hint">
+            حداقل ۱۲ نویسه؛ ترکیب حرف بزرگ/کوچک، رقم و نشانه پیشنهاد می‌شود.
+            رمز را بعد از ایجاد به کاربر تحویل دهید.
+          </div>
         </div>
+
         <div class="mb-3">
-          <label class="form-label">نقش</label>
-          <select class="form-select" name="role" required>
-            {% for key, label in roles.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+          {{ label_for('new-password-confirm', 'تکرار رمز عبور') }}
+          <input id="new-password-confirm" class="form-control" dir="ltr"
+                 type="password" name="password_confirm" required
+                 minlength="12" maxlength="128"
+                 autocomplete="new-password">
+          <div id="pw-mismatch" class="form-text text-danger d-none" role="alert">
+            رمز و تکرار آن یکسان نیستند.
+          </div>
+        </div>
+
+        <div class="mb-3">
+          {{ label_for('new-role', 'نقش') }}
+          <select id="new-role" class="form-select" name="role" required>
+            {% for key, label in roles.items() %}
+            <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
           </select>
         </div>
-        <button class="btn btn-primary w-100" type="submit">ایجاد کاربر</button>
+
+        <button class="btn btn-primary w-100" type="submit" id="btn-create-user">
+          <i class="bi bi-person-plus me-1" aria-hidden="true"></i> ایجاد کاربر
+        </button>
       </form>
     </div>
   </div>
+
+  <!-- ==================== جدول کاربران ==================== -->
   <div class="col-lg-8">
     <div class="card">
+      <div class="p-3 p-lg-4 border-bottom" style="border-color:var(--line)!important">
+        <h2 class="h6 mb-1">کاربران سامانه</h2>
+        <p class="small text-muted mb-0">فهرست حساب‌های ثبت‌شده و کنترل فعال/غیرفعال</p>
+      </div>
+
+      {% if users %}
       <div class="table-responsive">
         <table class="table table-hover mb-0">
-          <thead class="table-light"><tr><th>نام کاربری</th><th>نام</th><th>نقش</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+          <caption class="visually-hidden">فهرست کاربران سامانه</caption>
+          <thead>
+            <tr>
+              <th scope="col">نام کاربری</th>
+              <th scope="col">نام</th>
+              <th scope="col">نقش</th>
+              <th scope="col">وضعیت</th>
+              <th scope="col"><span class="visually-hidden">عملیات</span></th>
+            </tr>
+          </thead>
           <tbody>
             {% for user in users %}
+            {% set is_self = (user.id|string) == (current_user.id|string) %}
             <tr>
-              <td class="fw-bold">{{ user.username }}</td>
-              <td>{{ user.full_name or "—" }}</td>
-              <td>{{ user.role_label }}</td>
-              <td>{% if user.is_active_user %}<span class="badge bg-success">فعال</span>{% else %}<span class="badge bg-secondary">غیرفعال</span>{% endif %}</td>
+              <th scope="row" class="fw-bold" dir="ltr">{{ user.username }}</th>
+              <td>{{ user.full_name or '—' }}</td>
+              <td>{{ user.role_label or '—' }}</td>
               <td>
-                {% if user.id != current_user.id %}
-                <form method="post" action="{{ url_for("users.user_toggle", id=user.id) }}">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-                  <button class="btn btn-sm btn-outline-{% if user.is_active_user %}danger{% else %}success{% endif %}" type="submit">
-                    {% if user.is_active_user %}غیرفعال‌کردن{% else %}فعال‌کردن{% endif %}
-                  </button>
-                </form>
-                {% else %}<small class="text-muted">حساب فعلی</small>{% endif %}
+                {% if user.is_active_user %}
+                  <span class="badge bg-success">فعال</span>
+                {% else %}
+                  <span class="badge bg-secondary">غیرفعال</span>
+                {% endif %}
+              </td>
+              <td class="text-nowrap">
+                {% if is_self %}
+                  <small class="text-muted">حساب فعلی</small>
+                {% else %}
+                  <form method="post"
+                        action="{{ url_for('users.user_toggle', id=user.id) }}"
+                        class="d-inline js-toggle-form">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <button class="btn btn-sm btn-outline-{% if user.is_active_user %}danger{% else %}success{% endif %}"
+                            type="submit"
+                            data-action="{% if user.is_active_user %}غیرفعال‌سازی{% else %}فعال‌سازی{% endif %}"
+                            data-username="{{ user.username }}"
+                            aria-label="{% if user.is_active_user %}غیرفعال‌سازی{% else %}فعال‌سازی{% endif %} حساب {{ user.username }}">
+                      {% if user.is_active_user %}غیرفعال‌کردن{% else %}فعال‌کردن{% endif %}
+                    </button>
+                  </form>
+                {% endif %}
               </td>
             </tr>
-            {% else %}
-            <tr><td colspan="5" class="text-center text-muted py-4">کاربری ثبت نشده است.</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
+      {% else %}
+      <div class="empty-state">
+        <i class="bi bi-people" aria-hidden="true"></i>
+        <strong class="d-block mb-1">هیچ کاربری ثبت نشده است</strong>
+        <span class="small">برای شروع، از فرم سمت راست حساب کاربری جدید بسازید.</span>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- نمایش/مخفی‌سازی رمز ---------- */
+  var pwInput = document.getElementById("new-password");
+  var pwConfirm = document.getElementById("new-password-confirm");
+  var toggleBtn = document.getElementById("btn-toggle-pw");
+  var genBtn = document.getElementById("btn-generate-pw");
+  var mismatch = document.getElementById("pw-mismatch");
+  var form = document.getElementById("form-create-user");
+  var submitBtn = document.getElementById("btn-create-user");
+
+  if (toggleBtn && pwInput) {
+    toggleBtn.addEventListener("click", function () {
+      var showing = pwInput.type === "text";
+      pwInput.type = showing ? "password" : "text";
+      if (pwConfirm) pwConfirm.type = showing ? "password" : "text";
+      toggleBtn.setAttribute("aria-pressed", String(!showing));
+      toggleBtn.setAttribute("aria-label", showing ? "نمایش رمز عبور" : "پنهان کردن رمز عبور");
+      var icon = toggleBtn.querySelector("i");
+      if (icon) {
+        icon.classList.toggle("bi-eye", showing);
+        icon.classList.toggle("bi-eye-slash", !showing);
+      }
+      pwInput.focus();
+    });
+  }
+
+  /* ---------- تولید رمز تصادفی ---------- */
+  if (genBtn && pwInput) {
+    genBtn.addEventListener("click", function () {
+      var upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+      var lower = "abcdefghijkmnopqrstuvwxyz";
+      var digits = "23456789";
+      var symbols = "!@#$%^&*-_=+";
+      var all = upper + lower + digits + symbols;
+      var len = 16;
+      var out = [];
+      // تضمین حداقل یک کاراکتر از هر دسته
+      [upper, lower, digits, symbols].forEach(function (set) {
+        out.push(set[Math.floor(Math.random() * set.length)]);
+      });
+      for (var i = out.length; i < len; i++) {
+        out.push(all[Math.floor(Math.random() * all.length)]);
+      }
+      // شافل ساده (Fisher–Yates)
+      for (var j = out.length - 1; j > 0; j--) {
+        var k = Math.floor(Math.random() * (j + 1));
+        var tmp = out[j]; out[j] = out[k]; out[k] = tmp;
+      }
+      var pwd = out.join("");
+      pwInput.value = pwd;
+      if (pwConfirm) pwConfirm.value = pwd;
+      pwInput.type = "text";
+      if (pwConfirm) pwConfirm.type = "text";
+      toggleBtn && toggleBtn.setAttribute("aria-pressed", "true");
+      toggleBtn && toggleBtn.setAttribute("aria-label", "پنهان کردن رمز عبور");
+      var icon = toggleBtn && toggleBtn.querySelector("i");
+      if (icon) { icon.classList.remove("bi-eye"); icon.classList.add("bi-eye-slash"); }
+      pwInput.focus();
+      pwInput.select();
+    });
+  }
+
+  /* ---------- بررسی یکسانی رمز و تکرار ---------- */
+  function checkMatch() {
+    if (!pwInput || !pwConfirm || !mismatch) return;
+    var ok = pwInput.value === pwConfirm.value || pwConfirm.value === "";
+    mismatch.classList.toggle("d-none", ok);
+    pwConfirm.setCustomValidity(ok ? "" : "رمز و تکرار آن یکسان نیستند.");
+  }
+  if (pwInput && pwConfirm) {
+    pwInput.addEventListener("input", checkMatch);
+    pwConfirm.addEventListener("input", checkMatch);
+  }
+
+  /* ---------- جلوگیری از ارسال دوباره ---------- */
+  if (form && submitBtn) {
+    form.addEventListener("submit", function (e) {
+      checkMatch();
+      if (!form.checkValidity()) {
+        e.preventDefault();
+        form.reportValidity();
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.innerHTML =
+        '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> در حال ایجاد…';
+    });
+  }
+
+  /* ---------- تأیید غیرفعال/فعال‌سازی ---------- */
+  document.querySelectorAll(".js-toggle-form").forEach(function (f) {
+    f.addEventListener("submit", function (e) {
+      var btn = f.querySelector("button[type=submit]");
+      if (!btn) return;
+      var action = btn.dataset.action || "تغییر وضعیت";
+      var uname = btn.dataset.username || "";
+      if (!window.confirm(action + " حساب «" + uname + "» انجام شود؟")) {
+        e.preventDefault();
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}
