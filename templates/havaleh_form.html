@@ -28,8 +28,20 @@
              value="{{ item.tarikh_havaleh.isoformat() if item and item.tarikh_havaleh else '' }}">
     </div>
     <div class="col-md-3">
-      <label class="form-label">پلاک وسیله نقلیه</label>
+      <label class="form-label">نوع وسیله نقلیه</label>
+      <select name="noe_vasileh" class="form-select">
+        {% for v in ["کامیون", "تریلی", "خاور", "نیسان", "وانت", "سایر"] %}
+        <option value="{{ v }}" {% if item and item.noe_vasileh == v %}selected{% endif %}>{{ v }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">پلاک وسیله نقلیه / کشنده</label>
       <input type="text" name="pelak" class="form-control" value="{{ item.pelak if item else '' }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">پلاک تریلر (در صورت وجود)</label>
+      <input type="text" name="pelak_trailer" class="form-control" value="{{ item.pelak_trailer if item else '' }}">
     </div>
     <div class="col-md-3">
       <label class="form-label">نام راننده</label>
