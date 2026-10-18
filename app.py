@@ -235,9 +235,19 @@ def create_app(test_config=None):
                 raise ValueError("برای تکمیل حواله، کد کالای موجودی باید مشخص شود.")
             if item.vazn_khales is None:
                 raise ValueError("برای تکمیل حواله، وزن پُر و خالی باسکول را ثبت کنید.")
-            inventory = Inventory.query.filter_by(code_kala=item.code_kala).order_by(Inventory.id).first()
-            if inventory is None:
+            candidates = Inventory.query.filter_by(code_kala=item.code_kala).order_by(Inventory.id).all()
+            if not candidates:
                 raise ValueError("کد کالا در ایندکس موجودی پیدا نشد؛ ابتدا موجودی را بررسی کنید.")
+            if len(candidates) > 1:
+                specification = (item.moshakhasat_varagh or "").strip()
+                matches = [row for row in candidates if specification and specification in {
+                    (row.moshakhasat or "").strip(), (row.name_kala or "").strip()
+                }]
+                if len(matches) != 1:
+                    raise ValueError("این کد کالا چند ردیف موجودی دارد؛ مشخصات ورق را دقیقاً مطابق ایندکس انتخاب کنید تا موجودی اشتباه کسر نشود.")
+                inventory = matches[0]
+            else:
+                inventory = candidates[0]
             if inventory.mojudi_vaghei is None or inventory.mojudi_vaghei < item.vazn_khales:
                 raise ValueError("موجودی کافی نیست یا موجودی واقعی تعریف نشده است؛ کسر انجام نشد.")
             inventory.mojudi_vaghei = round(inventory.mojudi_vaghei - item.vazn_khales, 3)
