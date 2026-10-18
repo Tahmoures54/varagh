@@ -1,4 +1,5 @@
 import re
+import io
 
 import pytest
 
@@ -175,3 +176,59 @@ def test_warehouse_cannot_complete_voucher(client, app):
     with app.app_context():
         assert Havaleh.query.count() == 0
         assert Inventory.query.one().mojudi_vaghei == 1000
+
+
+def test_inventory_csv_import_is_repeatable(client, app):
+    login(client)
+    token = csrf(client, "/inventory")
+    payload = (
+        "code_kala,name_kala,moshakhasat,mojudi_vaghei,mogheiyat\n"
+        "ST-CSV,ورق,ST37-10mm,500,انبار A\n"
+    ).encode("utf-8")
+    response = client.post("/inventory/import", data={
+        "_csrf_token": token,
+        "inventory_file": (io.BytesIO(payload), "inventory.csv"),
+    }, content_type="multipart/form-data")
+    assert response.status_code == 302
+    token = csrf(client, "/inventory")
+    payload2 = (
+        "code_kala,name_kala,moshakhasat,mojudi_vaghei,mogheiyat\n"
+        "ST-CSV,ورق,ST37-10mm,450,انبار A\n"
+    ).encode("utf-8")
+    response = client.post("/inventory/import", data={
+        "_csrf_token": token,
+        "inventory_file": (io.BytesIO(payload2), "inventory.csv"),
+    }, content_type="multipart/form-data")
+    assert response.status_code == 302
+    with app.app_context():
+        assert Inventory.query.filter_by(code_kala="ST-CSV").count() == 1
+        assert Inventory.query.filter_by(code_kala="ST-CSV").one().mojudi_vaghei == 450
+
+
+def test_duplicate_stock_code_requires_matching_specification(client, app):
+    with app.app_context():
+        db.session.add_all([
+            Inventory(code_kala="DUP", name_kala="ورق", moshakhasat="A", mogheiyat="قفسه 1", mojudi_vaghei=500),
+            Inventory(code_kala="DUP", name_kala="ورق", moshakhasat="B", mogheiyat="قفسه 2", mojudi_vaghei=700),
+        ])
+        db.session.commit()
+    login(client)
+    token = csrf(client, "/havaleh/new")
+    response = client.post("/havaleh/new", data={
+        "_csrf_token": token,
+        "shomare_havaleh": "TEST-DUP",
+        "code_kala": "DUP",
+        "moshakhasat_varagh": "",
+        "vazn_esnadi": "100",
+        "vazn_por": "150",
+        "vazn_khali": "50",
+        "vaziyat_havaleh": "تکمیل‌شده",
+        "vaziyat_moghayerat": "بدون مغایرت",
+        "ghabz_por_piost": "خیر",
+        "ghabz_khali_piost": "خیر",
+    })
+    assert response.status_code == 200
+    with app.app_context():
+        stocks = sorted(row.mojudi_vaghei for row in Inventory.query.filter_by(code_kala="DUP").all())
+        assert stocks == [500, 700]
+        assert Havaleh.query.count() == 0
