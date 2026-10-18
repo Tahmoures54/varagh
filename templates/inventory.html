@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}ایندکس موجودی ورق‌ها{% endblock %}
+
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-box-seam"></i> ایندکس موجودی ورق‌های فولادی</h4>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <div class="text-muted small">تعداد کد کالا (یکتا)</div>
+      <div class="stat-value text-primary">{{ unique_count }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <div class="text-muted small">مجموع موجودی</div>
+      <div class="stat-value text-success">{{ "{:,.0f}".format(total_kg) }} <small>کیلوگرم</small></div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 text-center">
+      <div class="text-muted small">معادل تن</div>
+      <div class="stat-value text-info">{{ "{:,.2f}".format(total_kg / 1000) }} <small>تن</small></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>ردیف</th>
+          <th>کد کالا</th>
+          <th>نام کالا</th>
+          <th>ضخامت (میل)</th>
+          <th>مشخصات / گرید</th>
+          <th>موجودی واقعی (kg)</th>
+          <th>تعداد شیت</th>
+          <th>وزن هر شیت</th>
+          <th>وزن گروه</th>
+          <th>موقعیت</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+        <tr {% if it.vazn_goruh %}class="table-warning"{% endif %}>
+          <td>{{ it.radif }}</td>
+          <td class="fw-bold">{{ it.code_kala }}</td>
+          <td>{{ it.name_kala }}</td>
+          <td>{{ it.zekhamat }}</td>
+          <td>{{ it.moshakhasat or '—' }}</td>
+          <td>{{ "{:,.0f}".format(it.mojudi_vaghei) if it.mojudi_vaghei else '—' }}</td>
+          <td>{{ it.tedad_sheet if it.tedad_sheet is not none else '—' }}</td>
+          <td>{{ "{:,.1f}".format(it.vazn_har_sheet) if it.vazn_har_sheet else '—' }}</td>
+          <td>{% if it.vazn_goruh %}{{ "{:,.0f}".format(it.vazn_goruh) }}{% else %}—{% endif %}</td>
+          <td><small>{{ it.mogheiyat or '—' }}</small></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<p class="text-muted mt-3 small">
+  <i class="bi bi-info-circle"></i>
+  ردیف‌های زرد رنگ نشان‌دهنده یک کد کالا با چند گروه سایز/موقعیت متفاوت هستند.
+  موجودی واقعی در این موارد تکرار شده تا ارتباط حفظ شود.
+</p>
+{% endblock %}
