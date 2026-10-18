@@ -1,88 +1,195 @@
 {% extends "base.html" %}
 {% block title %}ایندکس موجودی ورق‌ها{% endblock %}
 
+{% block extra_css %}
+<style>
+  .inv-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f5f8fb;
+  }
+  .inv-stat-card .stat-value { font-size: 1.6rem; }
+  .inv-stat-card small { font-size: .78rem; }
+  .inv-dup-row > td { background: #fff8e6 !important; }
+  .inv-legend-dot {
+    display: inline-block;
+    width: .7rem; height: .7rem;
+    border-radius: 2px;
+    background: #fff8e6;
+    border: 1px solid #e6c96a;
+    vertical-align: middle;
+    margin-left: .35rem;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="page-heading"><div class="heading-group"><span class="heading-icon"><i class="bi bi-box-seam-fill"></i></span><div><h4>ایندکس موجودی ورق‌های فولادی</h4><p>مشاهده موجودی، کنترل کد کالا و به‌روزرسانی اطلاعات انبار</p></div></div></div>
+{# ---------- ماکروهای امن ---------- #}
+{%- macro num(v, digits=0) -%}
+  {%- if v is none -%}—{%- else -%}{{ "{:,.{d}f}".format(v, d=digits) }}{%- endif -%}
+{%- endmacro -%}
+
+<div class="page-heading">
+  <div class="heading-group">
+    <span class="heading-icon" aria-hidden="true"><i class="bi bi-box-seam-fill"></i></span>
+    <div>
+      <h4>ایندکس موجودی ورق‌های فولادی</h4>
+      <p>مشاهده موجودی، کنترل کد کالا و به‌روزرسانی اطلاعات انبار</p>
+    </div>
+  </div>
+</div>
 
 {% if current_user.role == 'admin' %}
 <div class="card p-3 p-lg-4 mb-4">
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
     <div>
       <strong>ورود موجودی از فایل</strong>
-      <div class="small text-muted">فایل CSV یا XLSX؛ حداکثر ۸ مگابایت و ۵۰۰۰ ردیف در هر بار.</div>
+      <div class="small text-muted">
+        فایل CSV یا XLSX؛ حداکثر ۸ مگابایت و ۵۰۰۰ ردیف در هر بار.
+      </div>
     </div>
-    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for("inventory.inventory_template") }}">دریافت الگوی CSV</a>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('inventory.inventory_template') }}">
+      دریافت الگوی CSV
+    </a>
   </div>
-  <form method="post" action="{{ url_for("inventory.inventory_import") }}" enctype="multipart/form-data" class="row g-2 align-items-center">
+
+  <form method="post"
+        action="{{ url_for('inventory.inventory_import') }}"
+        enctype="multipart/form-data"
+        class="row g-2 align-items-center"
+        id="inv-import-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-    <div class="col-md-8"><input class="form-control" type="file" name="inventory_file" accept=".csv,.xlsx" required></div>
-    <div class="col-md-4"><button class="btn btn-primary w-100" type="submit">ورود / به‌روزرسانی موجودی</button></div>
+    <div class="col-md-8">
+      <label class="visually-hidden" for="inventory_file">فایل موجودی</label>
+      <input class="form-control" type="file" id="inventory_file" name="inventory_file"
+             accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+             data-max-size="8388608" required
+             aria-describedby="inv-import-hint">
+    </div>
+    <div class="col-md-4">
+      <button class="btn btn-primary w-100" type="submit">ورود / به‌روزرسانی موجودی</button>
+    </div>
   </form>
-  <small class="text-muted mt-2">ستون‌های code_kala و mojudi_vaghei اجباری هستند. ردیف‌ها بر اساس کد کالا + مشخصات + موقعیت تطبیق داده می‌شوند؛ پیش از ورود، از فایل و پایگاه داده نسخه پشتیبان بگیرید.</small>
+
+  <div id="inv-import-hint" class="small text-muted mt-2">
+    ستون‌های <code>code_kala</code> و <code>mojudi_vaghei</code> اجباری هستند.
+    ردیف‌ها بر اساس کد کالا + مشخصات + موقعیت تطبیق داده می‌شوند؛
+    پیش از ورود، از فایل و پایگاه داده نسخه پشتیبان بگیرید.
+  </div>
 </div>
 {% endif %}
 
 <div class="row g-3 mb-4">
   <div class="col-md-4">
-    <div class="card p-3 text-center">
+    <div class="card inv-stat-card p-3 text-center">
       <div class="text-muted small">تعداد کد کالا (یکتا)</div>
-      <div class="stat-value text-primary">{{ unique_count }}</div>
+      <div class="stat-value text-primary">{{ num(unique_count) }}</div>
     </div>
   </div>
   <div class="col-md-4">
-    <div class="card p-3 text-center">
+    <div class="card inv-stat-card p-3 text-center">
       <div class="text-muted small">مجموع موجودی</div>
-      <div class="stat-value text-success">{{ "{:,.0f}".format(total_kg) }} <small>کیلوگرم</small></div>
+      <div class="stat-value text-success">
+        {{ num(total_kg) }} <small>کیلوگرم</small>
+      </div>
     </div>
   </div>
   <div class="col-md-4">
-    <div class="card p-3 text-center">
+    <div class="card inv-stat-card p-3 text-center">
       <div class="text-muted small">معادل تن</div>
-      <div class="stat-value text-info">{{ "{:,.2f}".format(total_kg / 1000) }} <small>تن</small></div>
+      <div class="stat-value text-info">
+        {% if total_kg is not none %}{{ "{:,.2f}".format(total_kg / 1000.0) }}{% else %}—{% endif %}
+        <small>تن</small>
+      </div>
     </div>
   </div>
 </div>
 
+{# ---------- محاسبهٔ تکرار کد کالا برای هایلایت ---------- #}
+{% set code_counts = {} %}
+{% for it in items %}
+  {% set _ = code_counts.update({it.code_kala: code_counts.get(it.code_kala, 0) + 1}) %}
+{% endfor %}
+
 <div class="card">
+  {% if items %}
   <div class="table-responsive">
-    <table class="table table-hover table-sm mb-0">
+    <table class="table table-hover table-sm mb-0 inv-table">
+      <caption class="visually-hidden">فهرست موجودی ورق‌های فولادی</caption>
       <thead class="table-light">
         <tr>
-          <th>ردیف</th>
-          <th>کد کالا</th>
-          <th>نام کالا</th>
-          <th>ضخامت (میل)</th>
-          <th>مشخصات / گرید</th>
-          <th>موجودی واقعی (kg)</th>
-          <th>تعداد شیت</th>
-          <th>وزن هر شیت</th>
-          <th>وزن گروه</th>
-          <th>موقعیت</th>
+          <th scope="col">ردیف</th>
+          <th scope="col">کد کالا</th>
+          <th scope="col">نام کالا</th>
+          <th scope="col">ضخامت (میل)</th>
+          <th scope="col">مشخصات / گرید</th>
+          <th scope="col">موجودی واقعی (kg)</th>
+          <th scope="col">تعداد شیت</th>
+          <th scope="col">وزن هر شیت</th>
+          <th scope="col">وزن گروه</th>
+          <th scope="col">موقعیت</th>
         </tr>
       </thead>
       <tbody>
         {% for it in items %}
-        <tr {% if it.vazn_goruh %}class="table-warning"{% endif %}>
-          <td>{{ it.radif }}</td>
-          <td class="fw-bold">{{ it.code_kala }}</td>
-          <td>{{ it.name_kala }}</td>
-          <td>{{ it.zekhamat }}</td>
+        {% set is_duplicate = code_counts.get(it.code_kala, 0) > 1 %}
+        <tr {% if is_duplicate %}class="inv-dup-row"{% endif %}>
+          <td>{{ it.radif if it.radif is defined else loop.index }}</td>
+          <td class="fw-bold text-nowrap">{{ it.code_kala }}</td>
+          <td>{{ it.name_kala or '—' }}</td>
+          <td>{{ it.zekhamat if it.zekhamat is not none else '—' }}</td>
           <td>{{ it.moshakhasat or '—' }}</td>
-          <td>{{ "{:,.0f}".format(it.mojudi_vaghei) if it.mojudi_vaghei else '—' }}</td>
+          <td class="text-nowrap">{{ num(it.mojudi_vaghei) }}</td>
           <td>{{ it.tedad_sheet if it.tedad_sheet is not none else '—' }}</td>
-          <td>{{ "{:,.1f}".format(it.vazn_har_sheet) if it.vazn_har_sheet else '—' }}</td>
-          <td>{% if it.vazn_goruh %}{{ "{:,.0f}".format(it.vazn_goruh) }}{% else %}—{% endif %}</td>
+          <td class="text-nowrap">{{ num(it.vazn_har_sheet, 1) }}</td>
+          <td class="text-nowrap">{{ num(it.vazn_goruh) }}</td>
           <td><small>{{ it.mogheiyat or '—' }}</small></td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-inbox" aria-hidden="true"></i>
+    <strong class="d-block mb-1">هیچ ردیفی ثبت نشده است</strong>
+    <span class="small">
+      {% if current_user.role == 'admin' %}
+        برای شروع، فایل موجودی را در بخش بالا بارگذاری کنید.
+      {% else %}
+        هنوز موجودی وارد نشده است.
+      {% endif %}
+    </span>
+  </div>
+  {% endif %}
 </div>
 
 <p class="text-muted mt-3 small">
-  <i class="bi bi-info-circle"></i>
+  <span class="inv-legend-dot" aria-hidden="true"></span>
+  <i class="bi bi-info-circle" aria-hidden="true"></i>
   ردیف‌های زرد رنگ نشان‌دهنده یک کد کالا با چند گروه سایز/موقعیت متفاوت هستند.
   موجودی واقعی در این موارد تکرار شده تا ارتباط حفظ شود.
 </p>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  "use strict";
+  var MAX_FILE_SIZE = 8 * 1024 * 1024;
+  var input = document.getElementById("inventory_file");
+  if (!input) return;
+
+  input.addEventListener("change", function () {
+    var file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > MAX_FILE_SIZE) {
+      alert("حجم فایل «" + file.name + "» بیش از ۸ مگابایت است.");
+      input.value = "";
+      input.focus();
+    }
+  });
+})();
+</script>
 {% endblock %}
