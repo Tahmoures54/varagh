@@ -21,6 +21,7 @@
         {% endfor %}
       {% endwith %}
       <form method="post">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
         <div class="mb-3">
           <label class="form-label">نام کاربری</label>
           <input type="text" name="username" class="form-control" required autofocus>
@@ -32,11 +33,7 @@
         <button type="submit" class="btn btn-primary w-100">ورود</button>
       </form>
       <hr>
-      <p class="small text-muted mb-0">
-        کاربران نمونه:<br>
-        admin / admin123 &nbsp;|&nbsp; herasat / herasat123<br>
-        anbar / anbar123 &nbsp;|&nbsp; project / project123
-      </p>
+      <p class="small text-muted mb-0">حساب مدیر اولیه فقط با متغیر محیطی VARAGH_ADMIN_PASSWORD ساخته می‌شود. برای دریافت دسترسی با مدیر سامانه تماس بگیرید.</p>
     </div>
   </div>
 </body>
