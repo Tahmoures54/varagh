@@ -630,7 +630,7 @@ def create_app(test_config=None):
     def receipt_download(filename):
         if filename != secure_filename(filename) or "/" in filename or "\\" in filename:
             abort(404)
-        return send_from_directory(UPLOAD_DIR, filename, as_attachment=False, max_age=0)
+        return send_from_directory(UPLOAD_DIR, filename, as_attachment=True, max_age=0)
 
     @app.errorhandler(403)
     def forbidden(_error):
