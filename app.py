@@ -28,8 +28,11 @@ from models import (
 
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
-DATA_DIR = Path(os.environ.get("VARAGH_DATA_DIR", BASE_DIR / "data")).resolve()
-UPLOAD_DIR = Path(os.environ.get("VARAGH_UPLOAD_DIR", DATA_DIR / "receipts")).resolve()
+# Vercel function bundles are read-only; /tmp is writable but not persistent.
+# Set VARAGH_DATA_DIR explicitly when using a mounted/persistent volume elsewhere.
+_default_data_dir = Path("/tmp/varagh-data") if os.environ.get("VERCEL") == "1" else BASE_DIR / "data"
+DATA_DIR = Path(os.environ.get("VARAGH_DATA_DIR") or _default_data_dir).resolve()
+UPLOAD_DIR = Path(os.environ.get("VARAGH_UPLOAD_DIR") or (DATA_DIR / "receipts")).resolve()
 MAX_UPLOAD_BYTES = 8 * 1024 * 1024
 ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "webp"}
 STATUSES = ["ثبت‌شده", "در حال بررسی", "خارج‌شده", "ناقص", "نیازمند بررسی", "تکمیل‌شده"]
