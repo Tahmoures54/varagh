@@ -291,7 +291,7 @@ def create_app(test_config=None):
     @auth_bp.route("/login", methods=["GET", "POST"])
     def login():
         if current_user.is_authenticated:
-            return redirect(url_for("dashboard.index))
+            return redirect(url_for("dashboard.index"))
         if request.method == "POST":
             username = (request.form.get("username") or "").strip()
             password = request.form.get("password") or ""
@@ -301,7 +301,7 @@ def create_app(test_config=None):
                 login_user(user, remember=False, fresh=True)
                 session["_csrf_token"] = secrets.token_urlsafe(32)
                 flash("با موفقیت وارد شدید.", "success")
-                return redirect(request.args.get("next") if (request.args.get("next", "").startswith("/") and not request.args.get("next", "").startswith("//")) else url_for("dashboard.index))
+                return redirect(request.args.get("next") if (request.args.get("next", "").startswith("/") and not request.args.get("next", "").startswith("//")) else url_for("dashboard.index"))
             flash("نام کاربری یا رمز عبور صحیح نیست.", "danger")
         return render_template("login.html")
 
@@ -311,7 +311,7 @@ def create_app(test_config=None):
         logout_user()
         session.clear()
         flash("از سامانه خارج شدید.", "info")
-        return redirect(url_for("auth.login))
+        return redirect(url_for("auth.login"))
 
     @dashboard_bp.route("/")
     @login_required
@@ -373,7 +373,7 @@ def create_app(test_config=None):
                 log_action("create", "Havaleh", item.id, f"شماره حواله={item.shomare_havaleh}")
                 db.session.commit()
                 flash(f"حواله {item.shomare_havaleh} ثبت شد.", "success")
-                return redirect(url_for("havaleh.havaleh_list))
+                return redirect(url_for("havaleh.havaleh_list"))
             except (ValueError, IntegrityError) as exc:
                 db.session.rollback()
                 flash(str(exc) if isinstance(exc, ValueError) else "شماره حواله تکراری است؛ دوباره تلاش کنید.", "danger")
@@ -435,7 +435,7 @@ def create_app(test_config=None):
                 log_action("update", "Havaleh", item.id, f"وضعیت: {old_status} ← {item.vaziyat_havaleh}")
                 db.session.commit()
                 flash("تغییرات حواله ذخیره شد.", "success")
-                return redirect(url_for("havaleh.havaleh_list))
+                return redirect(url_for("havaleh.havaleh_list"))
             except (ValueError, IntegrityError) as exc:
                 db.session.rollback()
                 flash(str(exc) if isinstance(exc, ValueError) else "ذخیره تغییرات ناموفق بود.", "danger")
@@ -449,12 +449,12 @@ def create_app(test_config=None):
         item = db.get_or_404(Havaleh, id)
         if item.inventory_deducted:
             flash("حواله‌ای که روی موجودی اثر گذاشته حذف نمی‌شود؛ برای اصلاح، با مدیر سامانه هماهنگ کنید.", "danger")
-            return redirect(url_for("havaleh.havaleh_list))
+            return redirect(url_for("havaleh.havaleh_list"))
         log_action("delete", "Havaleh", item.id, f"شماره حواله={item.shomare_havaleh}")
         db.session.delete(item)
         db.session.commit()
         flash("حواله حذف شد.", "success")
-        return redirect(url_for("havaleh.havaleh_list))
+        return redirect(url_for("havaleh.havaleh_list"))
 
     @users_bp.route("/users", methods=["GET", "POST"])
     @require_roles(ROLE_ADMIN)
@@ -480,7 +480,7 @@ def create_app(test_config=None):
                 log_action("user_created", "User", user.id, f"username={username}; role={role}")
                 db.session.commit()
                 flash("کاربر جدید ساخته شد.", "success")
-                return redirect(url_for("users.users))
+                return redirect(url_for("users.users"))
         users_list = User.query.order_by(User.username).all()
         return render_template("users.html", users=users_list,
                                roles={ROLE_ADMIN: "مدیر سیستم", ROLE_HERASAT: "حراست",
@@ -498,7 +498,7 @@ def create_app(test_config=None):
                        "User", user.id, f"username={user.username}")
             db.session.commit()
             flash("وضعیت کاربر تغییر کرد.", "success")
-        return redirect(url_for("users.users))
+        return redirect(url_for("users.users"))
 
     @inventory_bp.route("/inventory/template.csv")
     @require_roles(ROLE_ADMIN)
@@ -519,12 +519,12 @@ def create_app(test_config=None):
         upload = request.files.get("inventory_file")
         if not upload or not upload.filename:
             flash("فایل CSV یا XLSX موجودی را انتخاب کنید.", "danger")
-            return redirect(url_for("inventory.inventory_list))
+            return redirect(url_for("inventory.inventory_list"))
         filename = secure_filename(upload.filename)
         extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
         if extension not in ("csv", "xlsx"):
             flash("فقط فایل CSV یا XLSX پذیرفته می‌شود.", "danger")
-            return redirect(url_for("inventory.inventory_list))
+            return redirect(url_for("inventory.inventory_list"))
         try:
             if extension == "csv":
                 rows = list(csv.DictReader(io.StringIO(upload.read().decode("utf-8-sig"))))
@@ -616,7 +616,7 @@ def create_app(test_config=None):
             db.session.rollback()
             app.logger.exception("Inventory import failed")
             flash("ورود فایل ناموفق بود؛ ساختار فایل را بررسی کنید.", "danger")
-        return redirect(url_for("inventory.inventory_list))
+        return redirect(url_for("inventory.inventory_list"))
 
     @inventory_bp.route("/inventory")
     @login_required
