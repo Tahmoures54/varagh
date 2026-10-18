@@ -84,7 +84,8 @@
         </option>
         {% endfor %}
       </select>
-      <div class="form-text">با انتخاب کد، شرح کالا و مشخصات ورق از ایندکس پر می‌شود؛ در صورت نیاز می‌توانید آن‌ها را اصلاح کنید.</div>
+      <input type="hidden" name="mogheiyat_varagh" id="mogheiyat-varagh" value="{{ item.mogheiyat_varagh if item else '' }}">
+      <div class="form-text">با انتخاب کالا، شرح، مشخصات و محل موجودی از ایندکس نمایش داده می‌شود.</div>
     </div>
     <div class="col-md-3">
       <label class="form-label">وزن اسنادی (کیلوگرم)</label>
