@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}لیست حواله‌ها{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4><i class="bi bi-list-ul"></i> لیست حواله‌ها</h4>
+  <a href="{{ url_for('havaleh_new') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> ثبت حواله جدید</a>
+</div>
+
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-4">
+    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="جستجو: شماره حواله، پلاک، راننده، کالا...">
+  </div>
+  <div class="col-md-3">
+    <select name="status" class="form-select">
+      <option value="">همه وضعیت‌ها</option>
+      {% for s in statuses %}
+      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-outline-primary w-100">فیلتر</button>
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>شماره حواله</th>
+          <th>تاریخ</th>
+          <th>پلاک</th>
+          <th>راننده</th>
+          <th>کالا / مشخصات</th>
+          <th>وزن اسنادی</th>
+          <th>وزن خالص</th>
+          <th>اختلاف</th>
+          <th>مدت توقف</th>
+          <th>وضعیت</th>
+          <th>قبض‌ها</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in items %}
+        <tr>
+          <td class="fw-bold">{{ h.shomare_havaleh }}</td>
+          <td>{{ h.tarikh_havaleh or '—' }}</td>
+          <td>{{ h.pelak or '—' }}</td>
+          <td>{{ h.name_ranande or '—' }}</td>
+          <td>
+            <small>{{ h.sharh_kala or '' }}</small><br>
+            <small class="text-muted">{{ h.moshakhasat_varagh or '' }}</small>
+          </td>
+          <td>{% if h.vazn_esnadi %}{{ "{:,.0f}".format(h.vazn_esnadi) }}{% else %}—{% endif %}</td>
+          <td>{% if h.vazn_khales is not none %}{{ "{:,.0f}".format(h.vazn_khales) }}{% else %}—{% endif %}</td>
+          <td class="{% if h.ekhtelaf_vazn and h.ekhtelaf_vazn|abs > 100 %}text-danger fw-bold{% endif %}">
+            {% if h.ekhtelaf_vazn is not none %}{{ "{:,.0f}".format(h.ekhtelaf_vazn) }}{% else %}—{% endif %}
+          </td>
+          <td>{% if h.moddat_tavaghof_saat is not none %}{{ h.moddat_tavaghof_saat }} س{% else %}—{% endif %}</td>
+          <td>
+            {% if h.vaziyat_havaleh == 'تکمیل‌شده' %}
+              <span class="badge badge-complete">{{ h.vaziyat_havaleh }}</span>
+            {% elif h.vaziyat_havaleh == 'ناقص' %}
+              <span class="badge badge-incomplete">{{ h.vaziyat_havaleh }}</span>
+            {% elif h.vaziyat_havaleh == 'نیازمند بررسی' %}
+              <span class="badge badge-review">{{ h.vaziyat_havaleh }}</span>
+            {% elif h.vaziyat_havaleh == 'خارج‌شده' %}
+              <span class="badge badge-exit">{{ h.vaziyat_havaleh }}</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ h.vaziyat_havaleh }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if h.vaziyat_ghabzha == 'کامل' %}
+              <span class="badge badge-ok">کامل</span>
+            {% elif h.vaziyat_ghabzha == 'ناقص' %}
+              <span class="badge badge-incomplete">ناقص</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-nowrap">
+            <a href="{{ url_for('havaleh_edit', id=h.id) }}" class="btn btn-sm btn-outline-primary" title="ویرایش"><i class="bi bi-pencil"></i></a>
+            <form method="post" action="{{ url_for('havaleh_delete', id=h.id) }}" class="d-inline" onsubmit="return confirm('آیا از حذف این حواله مطمئن هستید؟')">
+              <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="12" class="text-center text-muted py-4">حواله‌ای یافت نشد.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
