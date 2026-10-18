@@ -35,7 +35,7 @@
         <tr>
           <th>شماره حواله</th>
           <th>تاریخ</th>
-          <th>پلاک</th>
+          <th>وسیله / پلاک</th>
           <th>راننده</th>
           <th>کالا / مشخصات</th>
           <th>وزن اسنادی</th>
@@ -52,7 +52,7 @@
         <tr>
           <td class="fw-bold">{{ h.shomare_havaleh }}</td>
           <td>{{ h.tarikh_havaleh or '—' }}</td>
-          <td>{{ h.pelak or '—' }}</td>
+          <td>{{ h.noe_vasileh or 'نوع نامشخص' }}<br><small>{{ h.pelak or '—' }}</small>{% if h.pelak_trailer %}<br><small class="text-muted">تریلر: {{ h.pelak_trailer }}</small>{% endif %}</td>
           <td>{{ h.name_ranande or '—' }}</td>
           <td>
             <small>{{ h.sharh_kala or '' }}</small><br>
