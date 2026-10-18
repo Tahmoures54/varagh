@@ -469,6 +469,124 @@ def create_app(test_config=None):
             flash("وضعیت کاربر تغییر کرد.", "success")
         return redirect(url_for("users"))
 
+    @app.route("/inventory/template.csv")
+    @require_roles(ROLE_ADMIN)
+    def inventory_template():
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["code_kala", "name_kala", "zekhamat", "moshakhasat", "vahed",
+                         "mojudi_vaghei", "tedad_sheet", "vazn_har_sheet", "vazn_goruh",
+                         "mogheiyat", "radif"])
+        response = make_response("\ufeff" + output.getvalue())
+        response.headers["Content-Type"] = "text/csv; charset=utf-8"
+        response.headers["Content-Disposition"] = "attachment; filename=varagh-inventory-template.csv"
+        return response
+
+    @app.route("/inventory/import", methods=["POST"])
+    @require_roles(ROLE_ADMIN)
+    def inventory_import():
+        upload = request.files.get("inventory_file")
+        if not upload or not upload.filename:
+            flash("فایل CSV یا XLSX موجودی را انتخاب کنید.", "danger")
+            return redirect(url_for("inventory_list"))
+        filename = secure_filename(upload.filename)
+        extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        if extension not in ("csv", "xlsx"):
+            flash("فقط فایل CSV یا XLSX پذیرفته می‌شود.", "danger")
+            return redirect(url_for("inventory_list"))
+        try:
+            if extension == "csv":
+                rows = list(csv.DictReader(io.StringIO(upload.read().decode("utf-8-sig"))))
+            else:
+                from openpyxl import load_workbook
+                workbook = load_workbook(io.BytesIO(upload.read()), read_only=True, data_only=True)
+                sheet = workbook.active
+                values = sheet.iter_rows(values_only=True)
+                header = next(values, None)
+                if not header:
+                    raise ValueError("فایل اکسل خالی است.")
+                keys = [str(value or "").strip() for value in header]
+                rows = [dict(zip(keys, row)) for row in values if any(value is not None for value in row)]
+                workbook.close()
+            if not rows:
+                raise ValueError("فایل هیچ ردیف داده‌ای ندارد.")
+            if len(rows) > 5000:
+                raise ValueError("در هر بار حداکثر ۵۰۰۰ ردیف قابل ورود است.")
+            required = {"code_kala", "mojudi_vaghei"}
+            headers = {str(key).strip() for row in rows for key in row.keys() if key is not None}
+            if not required.issubset(headers):
+                raise ValueError("ستون‌های code_kala و mojudi_vaghei الزامی هستند؛ از فایل الگو استفاده کنید.")
+
+            def cell_text(value):
+                return str(value).strip() if value is not None else ""
+
+            def cell_number(value, field, row_number, required=False):
+                raw = cell_text(value).replace(",", "")
+                if not raw:
+                    if required:
+                        raise ValueError(f"ردیف {row_number}: مقدار {field} الزامی است.")
+                    return None
+                try:
+                    number = float(raw)
+                except (TypeError, ValueError):
+                    raise ValueError(f"ردیف {row_number}: مقدار {field} عدد معتبر نیست.")
+                if number < 0:
+                    raise ValueError(f"ردیف {row_number}: مقدار {field} نمی‌تواند منفی باشد.")
+                return number
+
+            prepared = []
+            seen = set()
+            for row_number, row in enumerate(rows, start=2):
+                record = {str(k).strip(): v for k, v in row.items() if k is not None}
+                code = cell_text(record.get("code_kala"))[:30]
+                if not code:
+                    raise ValueError(f"ردیف {row_number}: کد کالا الزامی است.")
+                spec = cell_text(record.get("moshakhasat"))[:200]
+                location = cell_text(record.get("mogheiyat"))[:200]
+                identity = (code, spec, location)
+                if identity in seen:
+                    raise ValueError(f"ردیف {row_number}: ترکیب کد کالا، مشخصات و موقعیت تکراری است.")
+                seen.add(identity)
+                prepared.append({
+                    "code_kala": code,
+                    "name_kala": cell_text(record.get("name_kala"))[:100] or None,
+                    "zekhamat": cell_number(record.get("zekhamat"), "zekhamat", row_number),
+                    "moshakhasat": spec or None,
+                    "vahed": cell_text(record.get("vahed"))[:20] or "کیلو گرم",
+                    "mojudi_vaghei": cell_number(record.get("mojudi_vaghei"), "mojudi_vaghei", row_number, True),
+                    "tedad_sheet": cell_number(record.get("tedad_sheet"), "tedad_sheet", row_number),
+                    "vazn_har_sheet": cell_number(record.get("vazn_har_sheet"), "vazn_har_sheet", row_number),
+                    "vazn_goruh": cell_number(record.get("vazn_goruh"), "vazn_goruh", row_number),
+                    "mogheiyat": location or None,
+                    "radif": int(cell_number(record.get("radif"), "radif", row_number)) if cell_text(record.get("radif")) else None,
+                })
+            changed = 0
+            for record in prepared:
+                query = Inventory.query.filter_by(
+                    code_kala=record["code_kala"],
+                    moshakhasat=record["moshakhasat"],
+                    mogheiyat=record["mogheiyat"],
+                )
+                item = query.first()
+                if item is None:
+                    item = Inventory(**record)
+                    db.session.add(item)
+                else:
+                    for key, value in record.items():
+                        setattr(item, key, value)
+                changed += 1
+            log_action("inventory_import", "Inventory", None, f"ردیف‌های ثبت/به‌روزرسانی‌شده={changed}")
+            db.session.commit()
+            flash(f"ورود موجودی انجام شد؛ {changed} ردیف ثبت یا به‌روزرسانی شد.", "success")
+        except (ValueError, UnicodeDecodeError, csv.Error) as exc:
+            db.session.rollback()
+            flash(str(exc), "danger")
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Inventory import failed")
+            flash("ورود فایل ناموفق بود؛ ساختار فایل را بررسی کنید.", "danger")
+        return redirect(url_for("inventory_list"))
+
     @app.route("/inventory")
     @login_required
     def inventory_list():
