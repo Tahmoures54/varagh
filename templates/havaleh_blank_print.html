@@ -3,6 +3,23 @@
 
 {% block extra_css %}
 <style>
+  /* فونت فارسی خوانا و یکدست برای فرم و نسخه چاپی */
+  @import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css');
+
+  .paper-form,
+  .paper-form button,
+  .paper-form input,
+  .paper-form table{
+    font-family:'Vazirmatn',Tahoma,sans-serif;
+  }
+  .paper-form th,
+  .paper-form .section,
+  .paper-form h1,
+  .paper-form .label,
+  .paper-form .sign strong{
+    font-weight:700;
+  }
+
   /* ---------- فرم کاغذی (پیش‌نمایش روی صفحه) ---------- */
   .paper-form{
     max-width:1100px;margin:auto;background:#fff;color:#111;
