@@ -779,7 +779,7 @@ def create_app(test_config=None):
                 app.logger.exception("Database error on havaleh_new")
                 flash("ارتباط با پایگاه داده موقتاً برقرار نیست؛ دوباره تلاش کنید.", "danger")
 
-        inventory = Inventory.query.order_by(Inventory.code_kala).all()
+        inventory = Inventory.query.filter(Inventory.mogheiyat.ilike("%لیدان%"), ~Inventory.mogheiyat.ilike("%ساب%")).order_by(Inventory.code_kala).all()
         return render_template(
             "havaleh_form.html", item=None, inventory=inventory, statuses=STATUSES,
             moghayerat_list=MOGHAYERAT, bale_kheyr=BALE_KHEYR,
@@ -813,7 +813,7 @@ def create_app(test_config=None):
                 app.logger.exception("Database error on havaleh_edit")
                 flash("ارتباط با پایگاه داده موقتاً برقرار نیست؛ دوباره تلاش کنید.", "danger")
 
-        inventory = Inventory.query.order_by(Inventory.code_kala).all()
+        inventory = Inventory.query.filter(Inventory.mogheiyat.ilike("%لیدان%"), ~Inventory.mogheiyat.ilike("%ساب%")).order_by(Inventory.code_kala).all()
         return render_template(
             "havaleh_form.html", item=item, inventory=inventory, statuses=STATUSES,
             moghayerat_list=MOGHAYERAT, bale_kheyr=BALE_KHEYR,
@@ -1098,7 +1098,7 @@ def create_app(test_config=None):
     @inventory_bp.route("/inventory")
     @login_required
     def inventory_list():
-        items = Inventory.query.order_by(Inventory.code_kala, Inventory.id).all()
+        items = Inventory.query.filter(Inventory.mogheiyat.ilike("%لیدان%"), ~Inventory.mogheiyat.ilike("%ساب%")).order_by(Inventory.code_kala, Inventory.id).all()
         total_kg = sum((i.mojudi_vaghei or 0) for i in items)
         unique_count = len({i.code_kala for i in items})
         return render_template(
