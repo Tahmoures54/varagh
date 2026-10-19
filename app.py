@@ -1429,6 +1429,13 @@ def create_app(test_config=None):
         try:
             seed_path = BASE_DIR / "data" / "initial_inventory.csv"
             if seed_path.is_file() and not app.config.get("TESTING"):
+                # فهرست مرجع فعلی فقط موجودی لیدان است؛ ردیف‌های قدیمی سایر
+                # موقعیت‌ها و ردیف‌های ترکیبی لیدان/ساب‌استیشن از ایندکس حذف شوند.
+                Inventory.query.filter(or_(
+                    Inventory.mogheiyat.is_(None),
+                    ~Inventory.mogheiyat.ilike("%لیدان%"),
+                    Inventory.mogheiyat.ilike("%ساب%"),
+                )).delete(synchronize_session=False)
                 with seed_path.open("r", encoding="utf-8-sig", newline="") as seed_file:
                     for record in csv.DictReader(seed_file):
                         code = (record.get("code_kala") or "").strip()
