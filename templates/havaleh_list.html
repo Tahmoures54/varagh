@@ -55,8 +55,9 @@
           <td>{{ h.noe_vasileh or 'نوع نامشخص' }}<br><small>{{ h.pelak or '—' }}</small></td>
           <td>{{ h.name_ranande or '—' }}</td>
           <td>
-            <small>{{ h.sharh_kala or '' }}</small><br>
-            <small class="text-muted">{{ h.moshakhasat_varagh or '' }}</small>
+            {% if h.kala_items %}{% for k in h.kala_items %}
+              <small><strong>{{ k.code_kala or '' }}</strong> {{ k.sharh_kala or '' }}</small><br><small class="text-muted">{{ k.moshakhasat_varagh or '' }}{% if k.mogheiyat_varagh %} — {{ k.mogheiyat_varagh }}{% endif %}</small>{% if not loop.last %}<hr class="my-1">{% endif %}
+            {% endfor %}{% else %}<small>{{ h.sharh_kala or '' }}</small><br><small class="text-muted">{{ h.moshakhasat_varagh or '' }}</small>{% endif %}
           </td>
           <td>{% if h.vazn_esnadi %}{{ "{:,.0f}".format(h.vazn_esnadi) }}{% else %}—{% endif %}</td>
           <td>{% if h.vazn_khales is not none %}{{ "{:,.0f}".format(h.vazn_khales) }}{% else %}—{% endif %}</td>

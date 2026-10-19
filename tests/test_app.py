@@ -272,3 +272,57 @@ def test_receipt_status_only_counts_yes_as_uploaded():
     assert Havaleh(ghabz_por_piost="خیر", ghabz_khali_piost="خیر").vaziyat_ghabzha is None
     assert Havaleh(ghabz_por_piost="بله", ghabz_khali_piost="خیر").vaziyat_ghabzha == "ناقص"
     assert Havaleh(ghabz_por_piost="بله", ghabz_khali_piost="بله").vaziyat_ghabzha == "کامل"
+
+
+def test_multi_item_voucher_deducts_each_stock_atomically(client, app):
+    login(client)
+    with app.app_context():
+        db.session.add_all([
+            Inventory(code_kala="MULTI-A", name_kala="ورق A", moshakhasat="A", mogheiyat="انبار A", mojudi_vaghei=1000),
+            Inventory(code_kala="MULTI-B", name_kala="ورق B", moshakhasat="B", mogheiyat="انبار B", mojudi_vaghei=800),
+        ])
+        db.session.commit()
+    token = csrf(client, "/havaleh/new")
+    response = client.post("/havaleh/new", data={
+        "_csrf_token": token, "shomare_havaleh": "MULTI-OK",
+        "item_code_kala": ["MULTI-A", "MULTI-B"], "item_sharh_kala": ["ورق A", "ورق B"],
+        "item_moshakhasat_varagh": ["A", "B"], "item_mogheiyat_varagh": ["انبار A", "انبار B"],
+        "item_tedad_baste": ["2", "3"], "item_vazn_esnadi": ["200", "100"],
+        "code_kala": "MULTI-A", "sharh_kala": "ورق A", "moshakhasat_varagh": "A",
+        "mogheiyat_varagh": "انبار A", "tedad_baste": "2", "vazn_esnadi": "300",
+        "vazn_por": "400", "vazn_khali": "100", "vaziyat_havaleh": "تکمیل‌شده",
+        "vaziyat_moghayerat": "بدون مغایرت", "ghabz_por_piost": "خیر", "ghabz_khali_piost": "خیر",
+    })
+    assert response.status_code == 302
+    with app.app_context():
+        voucher = Havaleh.query.filter_by(shomare_havaleh="MULTI-OK").one()
+        assert len(voucher.kala_items) == 2 and voucher.vazn_esnadi == 300
+        stocks = {x.code_kala: x.mojudi_vaghei for x in Inventory.query.all()}
+        assert stocks == {"MULTI-A": 800, "MULTI-B": 700}
+        assert voucher.inventory_deducted is True
+
+
+def test_multi_item_voucher_insufficient_stock_deducts_nothing(client, app):
+    login(client)
+    with app.app_context():
+        db.session.add_all([
+            Inventory(code_kala="MULTI-C", name_kala="ورق C", moshakhasat="C", mogheiyat="انبار C", mojudi_vaghei=1000),
+            Inventory(code_kala="MULTI-D", name_kala="ورق D", moshakhasat="D", mogheiyat="انبار D", mojudi_vaghei=50),
+        ])
+        db.session.commit()
+    token = csrf(client, "/havaleh/new")
+    response = client.post("/havaleh/new", data={
+        "_csrf_token": token, "shomare_havaleh": "MULTI-FAIL",
+        "item_code_kala": ["MULTI-C", "MULTI-D"], "item_sharh_kala": ["ورق C", "ورق D"],
+        "item_moshakhasat_varagh": ["C", "D"], "item_mogheiyat_varagh": ["انبار C", "انبار D"],
+        "item_tedad_baste": ["1", "1"], "item_vazn_esnadi": ["100", "100"],
+        "code_kala": "MULTI-C", "sharh_kala": "ورق C", "moshakhasat_varagh": "C",
+        "mogheiyat_varagh": "انبار C", "tedad_baste": "1", "vazn_esnadi": "200",
+        "vazn_por": "300", "vazn_khali": "100", "vaziyat_havaleh": "تکمیل‌شده",
+        "vaziyat_moghayerat": "بدون مغایرت", "ghabz_por_piost": "خیر", "ghabz_khali_piost": "خیر",
+    })
+    assert response.status_code == 200
+    with app.app_context():
+        assert Havaleh.query.filter_by(shomare_havaleh="MULTI-FAIL").count() == 0
+        stocks = {x.code_kala: x.mojudi_vaghei for x in Inventory.query.all()}
+        assert stocks == {"MULTI-C": 1000, "MULTI-D": 50}

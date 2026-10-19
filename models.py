@@ -157,6 +157,10 @@ class Havaleh(db.Model):
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False, index=True)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
 
+    kala_items = db.relationship(
+        "HavalehItem", back_populates="havaleh",
+        cascade="all, delete-orphan", order_by="HavalehItem.radif",
+    )
     created_by = db.relationship('User', foreign_keys=[created_by_id])
     updated_by = db.relationship('User', foreign_keys=[updated_by_id])
 
@@ -209,6 +213,24 @@ class Havaleh(db.Model):
 
     def __repr__(self):
         return f"<Havaleh {self.shomare_havaleh} status={self.vaziyat_havaleh}>"
+
+class HavalehItem(db.Model):
+    """یک ردیف کالای مستقل در حواله؛ ستون‌های قدیمی برای سازگاری حفظ شده‌اند."""
+    __tablename__ = "havaleh_item"
+    id = db.Column(db.Integer, primary_key=True)
+    havaleh_id = db.Column(db.Integer, db.ForeignKey("havaleh.id", ondelete="CASCADE"), nullable=False, index=True)
+    radif = db.Column(db.Integer, nullable=False, default=1)
+    code_kala = db.Column(db.String(30), nullable=True, index=True)
+    sharh_kala = db.Column(db.String(100), nullable=True)
+    moshakhasat_varagh = db.Column(db.String(200), nullable=True)
+    mogheiyat_varagh = db.Column(db.String(200), nullable=True)
+    tedad_baste = db.Column(db.Integer, nullable=True)
+    vazn_esnadi = db.Column(db.Float, nullable=True)
+    inventory_deducted = db.Column(db.Boolean, default=False, nullable=False)
+    havaleh = db.relationship("Havaleh", back_populates="kala_items")
+
+    def __repr__(self):
+        return f"<HavalehItem {self.havaleh_id}:{self.radif} code={self.code_kala!r}>"
 
 
 class Inventory(db.Model):

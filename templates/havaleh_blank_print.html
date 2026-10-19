@@ -161,7 +161,7 @@
     </div>
   </div>
 
-  <h2 class="section">ج ـ اطلاعات کالا (در سامانه فعلاً هر حواله به یک ردیف کالا متصل است)</h2>
+  <h2 class="section">ج ـ اطلاعات کالا (برای هر نوع کالا یک ردیف جداگانه تکمیل شود)</h2>
   <div class="table-wrap">
     <table>
       <caption class="visually-hidden">ردیف کالای حواله</caption>
@@ -177,10 +177,9 @@
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td class="text-center">۱</td>
-          <td></td><td></td><td></td><td></td><td></td><td></td>
-        </tr>
+        {% for n in range(1, 7) %}
+        <tr><td class="text-center">{{ ['۱','۲','۳','۴','۵','۶'][n-1] }}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>

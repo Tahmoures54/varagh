@@ -26,7 +26,7 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
 from models import (
-    AuditLog, Havaleh, Inventory, SerialCounter, TransferControl, User, db,
+    AuditLog, Havaleh, HavalehItem, Inventory, SerialCounter, TransferControl, User, db,
     ROLE_ADMIN, ROLE_ANBAR, ROLE_HERASAT, ROLE_PROJECT, ROLE_VIEWER,
 )
 
@@ -527,53 +527,82 @@ def create_app(test_config=None):
         if can_edit("tozihat"):
             item.tozihat = (request.form.get("tozihat") or "").strip() or None
 
-        # ----- inventory deduction -----
-        if item.vaziyat_havaleh == "تکمیل‌شده" and not item.inventory_deducted:
-            if not item.code_kala:
-                raise ValueError("برای تکمیل حواله، کد کالای موجودی باید مشخص شود.")
-            if item.vazn_khales is None:
-                raise ValueError("برای تکمیل حواله، وزن پُر و خالی باسکول را ثبت کنید.")
-            candidates = (
-                Inventory.query
-                .filter_by(code_kala=item.code_kala)
-                .order_by(Inventory.id)
-                .all()
-            )
-            if not candidates:
-                raise ValueError("کد کالا در ایندکس موجودی پیدا نشد؛ ابتدا موجودی را بررسی کنید.")
-            if item.mogheiyat_varagh:
-                candidates = [
-                    row for row in candidates
-                    if (row.mogheiyat or "").strip() == item.mogheiyat_varagh
-                ]
-            if len(candidates) > 1:
-                specification = (item.moshakhasat_varagh or "").strip()
-                matches = [
-                    row for row in candidates
-                    if specification and specification in {
-                        (row.moshakhasat or "").strip(),
-                        (row.name_kala or "").strip(),
-                    }
-                ]
-                if len(matches) != 1:
-                    raise ValueError(
-                        "این کد کالا چند ردیف موجودی دارد؛ مشخصات ورق را دقیقاً "
-                        "مطابق ایندکس انتخاب کنید تا موجودی اشتباه کسر نشود."
-                    )
-                inventory = matches[0]
-            elif len(candidates) == 1:
-                inventory = candidates[0]
+
+        # ----- چندردیفی کردن کالا با سازگاری با حواله‌های قدیمی -----
+        row_fields = ["item_code_kala", "item_sharh_kala", "item_moshakhasat_varagh", "item_mogheiyat_varagh", "item_tedad_baste", "item_vazn_esnadi"]
+        row_values = [request.form.getlist(field) for field in row_fields]
+        submitted_rows = []
+        for idx in range(max([len(v) for v in row_values] or [0])):
+            vals = [(row_values[k][idx] if idx < len(row_values[k]) else "").strip() for k in range(6)]
+            if not any(vals): continue
+            code, name, spec, location, qty_raw, weight_raw = vals
+            if not code: raise ValueError(f"کد کالا در ردیف {idx + 1} انتخاب نشده است.")
+            try: qty = int(qty_raw) if qty_raw else None
+            except ValueError: raise ValueError(f"تعداد بسته در ردیف {idx + 1} باید عدد صحیح باشد.")
+            if qty is not None and (qty < 0 or qty > 10_000_000): raise ValueError(f"تعداد بسته در ردیف {idx + 1} معتبر نیست.")
+            try: weight = float(weight_raw.replace(",", "")) if weight_raw else None
+            except ValueError: raise ValueError(f"وزن اسنادی ردیف {idx + 1} باید عددی باشد.")
+            if weight is not None and (not math.isfinite(weight) or weight < 0): raise ValueError(f"وزن اسنادی ردیف {idx + 1} معتبر نیست.")
+            submitted_rows.append({"radif":len(submitted_rows)+1,"code_kala":code[:30],"sharh_kala":name[:100] or None,
+                "moshakhasat_varagh":spec[:200] or None,"mogheiyat_varagh":location[:200] or None,"tedad_baste":qty,"vazn_esnadi":weight})
+        has_multi_rows = bool(submitted_rows)
+        if has_multi_rows:
+            if item.inventory_deducted:
+                existing = [(r.code_kala or "",r.sharh_kala or "",r.moshakhasat_varagh or "",r.mogheiyat_varagh or "",r.tedad_baste,r.vazn_esnadi) for r in item.kala_items]
+                if not existing: existing=[(item.code_kala or "",item.sharh_kala or "",item.moshakhasat_varagh or "",item.mogheiyat_varagh or "",item.tedad_baste,item.vazn_esnadi)]
+                requested=[(r["code_kala"],r["sharh_kala"] or "",r["moshakhasat_varagh"] or "",r["mogheiyat_varagh"] or "",r["tedad_baste"],r["vazn_esnadi"]) for r in submitted_rows]
+                if requested != existing: raise ValueError("ردیف‌های کالای حواله‌ای که از موجودی آن کسر شده قابل تغییر نیستند؛ برای اصلاح با مدیر سامانه هماهنگ کنید.")
             else:
-                raise ValueError("محل انتخاب‌شده برای این کد کالا در ایندکس موجودی پیدا نشد.")
-            if inventory.mojudi_vaghei is None or inventory.mojudi_vaghei < item.vazn_khales:
-                raise ValueError("موجودی کافی نیست یا موجودی واقعی تعریف نشده است؛ کسر انجام نشد.")
-            inventory.mojudi_vaghei = round(inventory.mojudi_vaghei - item.vazn_khales, 3)
-            item.inventory_deducted = True
-            log_action(
-                "inventory_deducted", "Havaleh", item.id,
-                f"کد کالا={item.code_kala}; وزن خالص={item.vazn_khales}; "
-                f"موجودی پس از کسر={inventory.mojudi_vaghei}",
-            )
+                item.kala_items.clear()
+                for row in submitted_rows: item.kala_items.append(HavalehItem(**row))
+                first=submitted_rows[0]
+                item.code_kala,item.sharh_kala=first["code_kala"],first["sharh_kala"]
+                item.moshakhasat_varagh,item.mogheiyat_varagh=first["moshakhasat_varagh"],first["mogheiyat_varagh"]
+                item.tedad_baste=first["tedad_baste"]
+                item.vazn_esnadi=round(sum(r["vazn_esnadi"] or 0 for r in submitted_rows),3)
+        else:
+            submitted_rows=[{"radif":1,"code_kala":item.code_kala,"sharh_kala":item.sharh_kala,"moshakhasat_varagh":item.moshakhasat_varagh,
+                "mogheiyat_varagh":item.mogheiyat_varagh,"tedad_baste":item.tedad_baste,"vazn_esnadi":item.vazn_esnadi}]
+        # ابتدا همه ردیف‌ها را کنترل کن، سپس کسر موجودی انجام شود.
+        if item.vaziyat_havaleh == "تکمیل‌شده" and not item.inventory_deducted:
+            if item.vazn_khales is None: raise ValueError("برای تکمیل حواله، وزن پُر و خالی باسکول را ثبت کنید.")
+            if has_multi_rows:
+                if any(not r["code_kala"] or r["vazn_esnadi"] is None or r["vazn_esnadi"] <= 0 for r in submitted_rows):
+                    raise ValueError("برای تکمیل حواله، کد و وزن اسنادی مثبت هر ردیف کالا الزامی است.")
+                totals, stocks, deductions = {}, {}, []
+                for row in submitted_rows:
+                    candidates=Inventory.query.filter_by(code_kala=row["code_kala"]).order_by(Inventory.id).all()
+                    if row["mogheiyat_varagh"]: candidates=[x for x in candidates if (x.mogheiyat or "").strip()==row["mogheiyat_varagh"]]
+                    if len(candidates)>1:
+                        spec=(row["moshakhasat_varagh"] or "").strip()
+                        matches=[x for x in candidates if spec and spec in {(x.moshakhasat or "").strip(),(x.name_kala or "").strip()}]
+                        if len(matches)!=1: raise ValueError(f"ردیف {row['radif']}: کد کالا چند موجودی دارد؛ مشخصات و محل را مطابق ایندکس انتخاب کنید.")
+                        stock=matches[0]
+                    elif len(candidates)==1: stock=candidates[0]
+                    else: raise ValueError(f"ردیف {row['radif']}: کد کالا در ایندکس موجودی پیدا نشد.")
+                    w=row["vazn_esnadi"]; deductions.append((stock,w,row)); totals[stock.id]=totals.get(stock.id,0)+w; stocks[stock.id]=stock
+                for sid,total in totals.items():
+                    stock=stocks[sid]
+                    if stock.mojudi_vaghei is None or stock.mojudi_vaghei<total: raise ValueError("موجودی یکی از کالاها برای جمع ردیف‌های این حواله کافی نیست؛ هیچ کسر انجام نشد.")
+                for sid,total in totals.items(): stocks[sid].mojudi_vaghei=round(stocks[sid].mojudi_vaghei-total,3)
+                for child in item.kala_items: child.inventory_deducted=True
+                item.inventory_deducted=True
+                log_action("inventory_deducted","Havaleh",item.id,"کسر چندردیفی: "+"; ".join(f"{r['code_kala']} وزن اسنادی={w}" for _,w,r in deductions))
+            else:
+                if not item.code_kala: raise ValueError("برای تکمیل حواله، کد کالای موجودی باید مشخص شود.")
+                candidates=Inventory.query.filter_by(code_kala=item.code_kala).order_by(Inventory.id).all()
+                if not candidates: raise ValueError("کد کالا در ایندکس موجودی پیدا نشد؛ ابتدا موجودی را بررسی کنید.")
+                if item.mogheiyat_varagh: candidates=[row for row in candidates if (row.mogheiyat or "").strip()==item.mogheiyat_varagh]
+                if len(candidates)>1:
+                    spec=(item.moshakhasat_varagh or "").strip()
+                    matches=[row for row in candidates if spec and spec in {(row.moshakhasat or "").strip(),(row.name_kala or "").strip()}]
+                    if len(matches)!=1: raise ValueError("این کد کالا چند ردیف موجودی دارد؛ مشخصات ورق را دقیقاً مطابق ایندکس انتخاب کنید.")
+                    inventory=matches[0]
+                elif len(candidates)==1: inventory=candidates[0]
+                else: raise ValueError("محل انتخاب‌شده برای این کد کالا در ایندکس موجودی پیدا نشد.")
+                if inventory.mojudi_vaghei is None or inventory.mojudi_vaghei<item.vazn_khales: raise ValueError("موجودی کافی نیست یا موجودی واقعی تعریف نشده است؛ کسر انجام نشد.")
+                inventory.mojudi_vaghei=round(inventory.mojudi_vaghei-item.vazn_khales,3); item.inventory_deducted=True
+                log_action("inventory_deducted","Havaleh",item.id,f"کد کالا={item.code_kala}; وزن خالص={item.vazn_khales}; موجودی پس از کسر={inventory.mojudi_vaghei}")
 
         item.updated_by_id = current_user.id
         return old_status

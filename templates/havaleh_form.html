@@ -76,74 +76,20 @@
                inputmode="tel" pattern="[0-9۰-۹٠-٩+\-\s]{7,20}">
       </div>
 
-      <div class="col-md-3">
-        <label class="form-label" for="sharh_kala">شرح کالا</label>
-        <input type="text" id="sharh_kala" name="sharh_kala" class="form-control"
-               list="kala-list" value="{{ item.sharh_kala if item else '' }}" autocomplete="off">
-        <datalist id="kala-list">
-          {% for inv in inventory %}<option value="{{ inv.name_kala }}">{{ inv.name_kala }}</option>{% endfor %}
-        </datalist>
+      {% set product_rows = item.kala_items if item and item.kala_items else ([item] if item else [none]) %}
+      <div class="col-12">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2"><div><h5 class="mb-1">ردیف‌های کالا</h5><div class="form-text">برای هر نوع ورق یک ردیف جداگانه ثبت کنید؛ جمع وزن اسنادی خودکار محاسبه می‌شود.</div></div><button type="button" class="btn btn-outline-primary btn-sm" id="add-product-row"><i class="bi bi-plus-lg ms-1"></i> افزودن کالا</button></div>
+        <div class="table-responsive"><table class="table table-bordered table-sm align-middle" id="product-items-table">
+          <thead class="table-light"><tr><th>ردیف</th><th style="min-width:230px">ایندکس / کد کالا</th><th style="min-width:150px">شرح کالا</th><th style="min-width:180px">مشخصات ورق</th><th style="min-width:150px">محل موجودی</th><th style="min-width:110px">تعداد بسته</th><th style="min-width:140px">وزن اسنادی (کیلوگرم)</th><th>حذف</th></tr></thead>
+          <tbody id="product-items-body">{% for row in product_rows %}<tr class="product-row">
+            <td class="product-number text-center">{{ loop.index }}</td><td><select name="item_code_kala" class="form-select form-select-sm item-code-select" required><option value="">— انتخاب کالا —</option>
+            {% if row and row.code_kala and row.code_kala not in (inventory|map(attribute='code_kala')|list) %}<option value="{{ row.code_kala }}" selected data-name="{{ row.sharh_kala or '' }}" data-spec="{{ row.moshakhasat_varagh or '' }}" data-location="{{ row.mogheiyat_varagh or '' }}">کد قبلی: {{ row.code_kala }} (در ایندکس فعلی نیست)</option>{% endif %}
+            {% for inv in inventory %}<option value="{{ inv.code_kala }}" data-name="{{ inv.name_kala or '' }}" data-spec="{{ inv.moshakhasat or inv.name_kala or '' }}" data-location="{{ inv.mogheiyat or '' }}" {% if row and row.code_kala == inv.code_kala and (not row.mogheiyat_varagh or row.mogheiyat_varagh == inv.mogheiyat) and (not row.moshakhasat_varagh or row.moshakhasat_varagh == inv.moshakhasat or row.moshakhasat_varagh == inv.name_kala) %}selected{% endif %}>{{ inv.code_kala }} — {{ inv.name_kala or inv.moshakhasat or 'بدون نام' }}{% if inv.zekhamat is not none %} — {{ inv.zekhamat }} میل{% endif %} — {{ inv.mogheiyat or 'محل نامشخص' }}</option>{% endfor %}</select></td>
+            <td><input type="text" name="item_sharh_kala" class="form-control form-control-sm item-name" value="{{ row.sharh_kala if row else '' }}" maxlength="100"></td><td><input type="text" name="item_moshakhasat_varagh" class="form-control form-control-sm item-spec" value="{{ row.moshakhasat_varagh if row else '' }}" maxlength="200"></td><td><input type="text" name="item_mogheiyat_varagh" class="form-control form-control-sm item-location" value="{{ row.mogheiyat_varagh if row else '' }}" maxlength="200"></td><td><input type="number" name="item_tedad_baste" class="form-control form-control-sm item-quantity" value="{{ row.tedad_baste if row and row.tedad_baste is not none else '' }}" min="0" step="1"></td><td><input type="number" name="item_vazn_esnadi" class="form-control form-control-sm item-weight" value="{{ row.vazn_esnadi if row and row.vazn_esnadi is not none else '' }}" min="0" step="0.01"></td><td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm remove-product-row" aria-label="حذف ردیف کالا"><i class="bi bi-trash"></i></button></td>
+          </tr>{% endfor %}</tbody><tfoot><tr class="table-light"><th colspan="6" class="text-end">جمع وزن اسنادی کالاها (کیلوگرم)</th><th><span id="sum-product-weight">۰</span></th><th></th></tr></tfoot>
+        </table></div><div class="alert alert-info py-2 small mb-0">هنگام تکمیل حواله، موجودی تمام ردیف‌ها ابتدا بررسی می‌شود؛ در صورت کمبود موجودی حتی یک ردیف، هیچ کسر انجام نمی‌شود.</div>
+        <input type="hidden" name="code_kala" id="legacy-code-kala" value="{{ item.code_kala if item else '' }}"><input type="hidden" name="sharh_kala" id="legacy-sharh-kala" value="{{ item.sharh_kala if item else '' }}"><input type="hidden" name="moshakhasat_varagh" id="legacy-moshakhasat-varagh" value="{{ item.moshakhasat_varagh if item else '' }}"><input type="hidden" name="mogheiyat_varagh" id="legacy-mogheiyat-varagh" value="{{ item.mogheiyat_varagh if item else '' }}"><input type="hidden" name="tedad_baste" id="legacy-tedad-baste" value="{{ item.tedad_baste if item and item.tedad_baste is not none else '' }}"><input type="hidden" name="vazn_esnadi" id="legacy-vazn-esnadi" value="{{ item.vazn_esnadi if item and item.vazn_esnadi is not none else '' }}">
       </div>
-
-      <div class="col-md-3">
-        <label class="form-label" for="moshakhasat_varagh">مشخصات ورق (گرید / ضخامت)</label>
-        <input type="text" id="moshakhasat_varagh" name="moshakhasat_varagh" class="form-control"
-               list="mosh-list" value="{{ item.moshakhasat_varagh if item else '' }}" autocomplete="off">
-        <datalist id="mosh-list">
-          {% for inv in inventory %}
-          <option value="{{ inv.moshakhasat or inv.name_kala }}">{{ inv.moshakhasat or inv.name_kala }}</option>
-          {% endfor %}
-        </datalist>
-      </div>
-
-      <div class="col-md-2">
-        <label class="form-label" for="tedad_baste">تعداد بسته</label>
-        <input type="number" id="tedad_baste" name="tedad_baste" class="form-control"
-               value="{{ item.tedad_baste if item else '' }}" min="0" step="1" inputmode="numeric">
-      </div>
-
-      <div class="col-md-4">
-        <label class="form-label" for="code-kala-select">انتخاب کالا از ایندکس موجودی</label>
-        {% set inventory_codes = inventory|map(attribute='code_kala')|list %}
-        {% set current_code = item.code_kala if item else '' %}
-        <select id="code-kala-select" name="code_kala" class="form-select" autocomplete="off"
-                aria-describedby="hint-code">
-          <option value="">— انتخاب کالا —</option>
-          {% if current_code and current_code not in inventory_codes %}
-          <option value="{{ current_code }}" selected
-                  data-name="{{ item.sharh_kala or '' }}"
-                  data-spec="{{ item.moshakhasat_varagh or '' }}"
-                  data-location="{{ item.mogheiyat_varagh or '' }}">
-            کد قبلی: {{ current_code }} (در ایندکس فعلی موجود نیست)
-          </option>
-          {% endif %}
-          {% for inv in inventory %}
-          <option value="{{ inv.code_kala }}"
-                  data-name="{{ inv.name_kala or '' }}"
-                  data-spec="{{ inv.moshakhasat or '' }}"
-                  data-location="{{ inv.mogheiyat or '' }}"
-                  data-thickness="{{ inv.zekhamat if inv.zekhamat is not none else '' }}"
-                  {% if item and item.code_kala == inv.code_kala %}selected{% endif %}>
-            {{ inv.code_kala }} — {{ inv.name_kala or inv.moshakhasat or 'بدون نام' }}
-            {%- if inv.zekhamat is not none %} — {{ inv.zekhamat }} میل{% endif %}
-            — {{ inv.mogheiyat or 'محل نامشخص' }}
-          </option>
-          {% endfor %}
-        </select>
-        <input type="hidden" name="mogheiyat_varagh" id="mogheiyat-varagh"
-               value="{{ item.mogheiyat_varagh if item else '' }}">
-        <div id="hint-code" class="form-text">با انتخاب کالا، شرح، مشخصات و محل موجودی از ایندکس نمایش داده می‌شود.</div>
-      </div>
-
-      <div class="col-md-3">
-        <label class="form-label" for="vazn_esnadi">وزن اسنادی (کیلوگرم)</label>
-        <input type="number" id="vazn_esnadi" name="vazn_esnadi" class="form-control"
-               value="{{ item.vazn_esnadi if item else '' }}"
-               min="0" step="0.01" inputmode="decimal">
-      </div>
-    </div>
-  </fieldset>
-
   {# ---------------- ب ---------------- #}
   <fieldset class="border-0 p-0 m-0">
     <legend class="section-title w-100"><i class="bi bi-clock-history" aria-hidden="true"></i> ب) ورود و خروج از لیدان فراسکو</legend>
@@ -335,38 +281,22 @@
 
   var MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
 
-  /* ---------- سینک کد کالا → شرح/مشخصات/محل ---------- */
-  var selector      = document.getElementById("code-kala-select");
-  var nameField     = document.querySelector('[name="sharh_kala"]');
-  var specField     = document.querySelector('[name="moshakhasat_varagh"]');
-  var locationField = document.getElementById("mogheiyat-varagh");
-  var thicknessFieldNote = document.querySelector('[name="moshakhasat_varagh"]'); // همان spec
-
-  if (selector && nameField && specField) {
-    selector.addEventListener("change", function () {
-      var option = selector.options[selector.selectedIndex];
-
-      // انتخاب گزینهٔ خالی → پاک‌سازی
-      if (!option || !option.value) {
-        nameField.value = "";
-        specField.value = "";
-        if (locationField) locationField.value = "";
-        return;
-      }
-
-      if (option.dataset.name) nameField.value = option.dataset.name;
-
-      if (option.dataset.spec) {
-        specField.value = option.dataset.spec;
-      } else if (option.dataset.thickness) {
-        specField.value = "ضخامت " + option.dataset.thickness;
-      } else {
-        specField.value = "";
-      }
-
-      if (locationField) locationField.value = option.dataset.location || "";
-    });
+  /* ---------- مدیریت ردیف‌های کالا ---------- */
+  var tbody=document.getElementById("product-items-body"), addRowButton=document.getElementById("add-product-row");
+  function updateProductRows(){
+    if(!tbody)return;var rows=Array.from(tbody.querySelectorAll(".product-row")),total=0;
+    rows.forEach(function(row,index){row.querySelector(".product-number").textContent=String(index+1).replace(/[0-9]/g,function(d){return "۰۱۲۳۴۵۶۷۸۹"[d];});var w=row.querySelector(".item-weight").value;if(w&&Number.isFinite(Number(w)))total+=Number(w);row.querySelector(".remove-product-row").disabled=rows.length===1;});
+    var sum=document.getElementById("sum-product-weight");if(sum)sum.textContent=total.toLocaleString("fa-IR",{maximumFractionDigits:2});
+    var first=rows[0];[["legacy-code-kala",".item-code-select"],["legacy-sharh-kala",".item-name"],["legacy-moshakhasat-varagh",".item-spec"],["legacy-mogheiyat-varagh",".item-location"],["legacy-tedad-baste",".item-quantity"]].forEach(function(p){var target=document.getElementById(p[0]),source=first&&first.querySelector(p[1]);if(target)target.value=source?source.value:"";});
+    var lw=document.getElementById("legacy-vazn-esnadi");if(lw)lw.value=total?String(total):"";
   }
+  function wireRow(row){
+    var select=row.querySelector(".item-code-select");
+    select.addEventListener("change",function(){var opt=select.options[select.selectedIndex];row.querySelector(".item-name").value=opt&&opt.value?(opt.dataset.name||""):"";row.querySelector(".item-spec").value=opt&&opt.value?(opt.dataset.spec||""):"";row.querySelector(".item-location").value=opt&&opt.value?(opt.dataset.location||""):"";updateProductRows();});
+    row.querySelectorAll("input").forEach(function(input){input.addEventListener("input",updateProductRows);});
+    row.querySelector(".remove-product-row").addEventListener("click",function(){if(tbody.querySelectorAll(".product-row").length>1){row.remove();updateProductRows();}});
+  }
+  if(tbody){tbody.querySelectorAll(".product-row").forEach(wireRow);if(addRowButton)addRowButton.addEventListener("click",function(){if(tbody.querySelectorAll(".product-row").length>=100){alert("حداکثر ۱۰۰ ردیف کالا برای هر حواله مجاز است.");return;}var clone=tbody.querySelector(".product-row").cloneNode(true);clone.querySelectorAll("input").forEach(function(input){input.value="";});clone.querySelector("select").selectedIndex=0;tbody.appendChild(clone);wireRow(clone);updateProductRows();clone.querySelector("select").focus();});updateProductRows();var parentForm=tbody.closest("form");if(parentForm)parentForm.addEventListener("submit",updateProductRows);}
 
   /* ---------- اعتبارسنجی اندازهٔ فایل‌ها ---------- */
   document.querySelectorAll('input[type="file"][data-max-size]').forEach(function (input) {
