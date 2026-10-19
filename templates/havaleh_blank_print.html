@@ -56,9 +56,17 @@
     html,body{background:#fff!important}
     .app-navbar,footer,.skip-link,.no-print,
     #main-content .alert{display:none!important}
+    /*
+     * حاشیه‌ی @page در بعضی مرورگرها/تنظیمات چاپ به‌تنهایی قابل اتکا نیست.
+     * یک فاصله‌ی داخلی مستقل هم اضافه می‌کنیم تا خود فرم از لبه‌ها دور بماند.
+     */
     main.container{
-      max-width:none!important;width:100%!important;
-      margin:0!important;padding:0!important;
+      display:block!important;
+      max-width:none!important;
+      width:100%!important;
+      box-sizing:border-box!important;
+      margin:0!important;
+      padding:4mm!important;
     }
 
     .paper-form{
