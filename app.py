@@ -546,6 +546,17 @@ def create_app(test_config=None):
             submitted_rows.append({"radif":len(submitted_rows)+1,"code_kala":code[:30],"sharh_kala":name[:100] or None,
                 "moshakhasat_varagh":spec[:200] or None,"mogheiyat_varagh":location[:200] or None,"tedad_baste":qty,"vazn_esnadi":weight})
         has_multi_rows = bool(submitted_rows)
+        # نقش‌هایی که اجازه تغییر کد/وزن/تعداد کالا را ندارند، از طریق فیلدهای تکرارشونده هم نمی‌توانند این محدودیت را دور بزنند.
+        if has_multi_rows and any(not can_edit(field) for field in ("code_kala", "vazn_esnadi", "tedad_baste")):
+            old_rows = [(r.code_kala or "", r.sharh_kala or "", r.moshakhasat_varagh or "",
+                         r.mogheiyat_varagh or "", r.tedad_baste, r.vazn_esnadi) for r in item.kala_items]
+            if not old_rows:
+                old_rows = [(item.code_kala or "", item.sharh_kala or "", item.moshakhasat_varagh or "",
+                             item.mogheiyat_varagh or "", item.tedad_baste, item.vazn_esnadi)]
+            new_rows = [(r["code_kala"], r["sharh_kala"] or "", r["moshakhasat_varagh"] or "",
+                         r["mogheiyat_varagh"] or "", r["tedad_baste"], r["vazn_esnadi"]) for r in submitted_rows]
+            if not item.id or new_rows != old_rows:
+                raise ValueError("نقش کاربری شما اجازه افزودن یا تغییر ردیف‌های کالا، تعداد و وزن اسنادی را ندارد.")
         if has_multi_rows:
             if item.inventory_deducted:
                 existing = [(r.code_kala or "",r.sharh_kala or "",r.moshakhasat_varagh or "",r.mogheiyat_varagh or "",r.tedad_baste,r.vazn_esnadi) for r in item.kala_items]
