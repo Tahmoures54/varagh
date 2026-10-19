@@ -49,7 +49,7 @@
   }
 
   /* ---------- چاپ ---------- */
-  @page{size:A4 landscape;margin:8mm}
+  @page{size:A4 landscape;margin:5mm}
   @media print{
     html,body{background:#fff!important}
     .app-navbar,footer,.skip-link,.no-print,
@@ -60,20 +60,30 @@
     }
 
     .paper-form{
-      max-width:none;border:1px solid #222;border-radius:0;
-      padding:6px;font-size:9px;
+      max-width:none;width:100%;box-sizing:border-box;
+      border:1px solid #222;border-radius:0;
+      padding:3px;font-size:7.6px;line-height:1.15;
+      zoom:.88;
     }
-    .paper-form h1{font-size:15px}
+    .paper-form header{margin-bottom:2px!important}
+    .paper-form h1{font-size:12px;line-height:1.15;margin:0 0 2px}
+    .paper-form .basmala{font-size:9px;margin-bottom:1px}
+    .paper-form .form-sub{font-size:7px;margin:1px 0 0}
     .paper-form .section{
-      font-size:10px;margin:5px 0 3px;padding:3px 5px;
-      break-after:avoid;
+      font-size:8px;margin:2px 0 2px;padding:2px 4px;
+      line-height:1.1;break-after:avoid;
     }
-    .paper-form .field{min-height:19px;padding:2px}
-    .paper-form th,.paper-form td{height:24px;padding:3px;font-size:8.5px}
-    .paper-form th{font-size:8.5px}
-    .paper-form .sign{min-height:38px;padding:4px}
-    .paper-form .opt::before{width:8px;height:8px}
-    .paper-form .date-ph{font-size:8px}
+    .paper-form .row{--bs-gutter-x:.35rem;--bs-gutter-y:.1rem}
+    .paper-form .field{min-height:14px;padding:1px 2px;gap:1px 3px}
+    .paper-form th,.paper-form td{height:19px;padding:2px;font-size:7px;line-height:1.1}
+    .paper-form th{font-size:7px}
+    .paper-form .sign{min-height:25px;padding:2px;line-height:1.15}
+    .paper-form .opt::before{width:7px;height:7px}
+    .paper-form .date-ph{font-size:6.8px}
+    .paper-form .small{font-size:6.8px!important;line-height:1.1}
+    .paper-form .mt-1{margin-top:2px!important}
+    .paper-form .mt-2{margin-top:3px!important}
+    .paper-form .mb-2{margin-bottom:2px!important}
 
     .paper-form .table-wrap{overflow:visible}
     .paper-form thead{display:table-header-group}
