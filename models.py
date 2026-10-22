@@ -249,6 +249,8 @@ class Inventory(db.Model):
     radif = db.Column(db.Integer, nullable=True)
     code_kala = db.Column(db.String(30), index=True, nullable=False)
     name_kala = db.Column(db.String(100), nullable=True)
+    tool = db.Column(db.String(30), nullable=True)
+    arz = db.Column(db.String(30), nullable=True)
     zekhamat = db.Column(db.Float, nullable=True)
     moshakhasat = db.Column(db.String(200), nullable=True, index=True)
     vahed = db.Column(db.String(20), default='کیلو گرم', nullable=False)
