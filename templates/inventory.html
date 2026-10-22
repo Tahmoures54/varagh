@@ -122,6 +122,8 @@
           <th scope="col">ردیف</th>
           <th scope="col">کد کالا</th>
           <th scope="col">نام کالا</th>
+          <th scope="col">طول</th>
+          <th scope="col">عرض</th>
           <th scope="col">ضخامت (میل)</th>
           <th scope="col">مشخصات / گرید</th>
           <th scope="col">موجودی واقعی (kg)</th>
@@ -138,6 +140,8 @@
           <td>{{ it.radif if it.radif is defined else loop.index }}</td>
           <td class="fw-bold text-nowrap">{{ it.code_kala }}</td>
           <td>{{ it.name_kala or '—' }}</td>
+          <td class="text-nowrap">{{ it.tool or '—' }}</td>
+          <td class="text-nowrap">{{ it.arz or '—' }}</td>
           <td>{{ it.zekhamat if it.zekhamat is not none else '—' }}</td>
           <td>{{ it.moshakhasat or '—' }}</td>
           <td class="text-nowrap">{{ num(it.mojudi_vaghei) }}</td>
