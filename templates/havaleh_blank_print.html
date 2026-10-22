@@ -207,27 +207,29 @@
       <thead>
         <tr>
           <th scope="col" style="width:4%">ردیف</th>
-          <th scope="col" style="width:13%">ایندکس / کد کالا</th>
-          <th scope="col" style="width:11%">نوع ورق</th>
-          <th scope="col" style="width:10%">گرید / استاندارد</th>
-          <th scope="col" style="width:9%">ضخامت (میلی‌متر)</th>
-          <th scope="col" style="width:9%">طول (متر)</th>
-          <th scope="col" style="width:9%">عرض (متر)</th>
-          <th scope="col" style="width:8%">تعداد ورق</th>
-          <th scope="col" style="width:10%">محل موجودی</th>
-          <th scope="col" style="width:10%">وزن اسنادی (کیلوگرم)</th>
-          <th scope="col" style="width:7%">توضیحات</th>
+          <th scope="col" style="width:11%">ایندکس / کد کالا</th>
+          <th scope="col" style="width:9%">نوع ورق</th>
+          <th scope="col" style="width:8%">گرید / استاندارد</th>
+          <th scope="col" style="width:7%">ضخامت (میلی‌متر)</th>
+          <th scope="col" style="width:7%">طول (متر)</th>
+          <th scope="col" style="width:7%">عرض (متر)</th>
+          <th scope="col" style="width:7%">تعداد ورق</th>
+          <th scope="col" style="width:8%">وزن هر ورق (کیلوگرم)</th>
+          <th scope="col" style="width:9%">محل موجودی</th>
+          <th scope="col" style="width:6%">تعداد بسته</th>
+          <th scope="col" style="width:9%">وزن اسنادی (کیلوگرم)</th>
+          <th scope="col" style="width:8%">توضیحات</th>
         </tr>
       </thead>
       <tbody>
         {% for n in range(1, 7) %}
-        <tr><td class="text-center">{{ ['۱','۲','۳','۴','۵','۶'][n-1] }}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><td class="text-center">{{ ['۱','۲','۳','۴','۵','۶'][n-1] }}</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
   <div class="small mt-1">
-    ایندکس کالا را مطابق فهرست رسمی ثبت کنید؛ نوع ورق، گرید، ضخامت، طول، عرض، تعداد و محل موجودی را جداگانه بنویسید.
+    ایندکس کالا را مطابق فهرست رسمی ثبت کنید؛ نوع ورق، گرید، ضخامت، طول، عرض، تعداد ورق، وزن هر ورق، محل موجودی و تعداد بسته را جداگانه بنویسید.
     وزن اسنادی را با مدارک حمل تطبیق دهید.
   </div>
 
