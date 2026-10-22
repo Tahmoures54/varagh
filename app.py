@@ -612,7 +612,20 @@ def create_app(test_config=None):
                     if len(candidates)>1:
                         spec=(row["moshakhasat_varagh"] or "").strip()
                         matches=[x for x in candidates if spec and spec in {(x.moshakhasat or "").strip(),(x.name_kala or "").strip()}]
-                        if len(matches)!=1: raise ValueError(f"ردیف {row['radif']}: کد کالا چند موجودی دارد؛ مشخصات و محل را مطابق ایندکس انتخاب کنید.")
+                        # یک کد ممکن است چند سایز داشته باشد؛ در این حالت طول و عرض نیز
+                        # برای تشخیص دقیق ردیف موجودی استفاده می‌شوند.
+                        def dimension_value(value):
+                            if value is None or str(value).strip()=="":
+                                return None
+                            found=re.search(r"[-+]?\\d+(?:\\.\\d+)?",str(value).replace(",",""))
+                            return float(found.group(0)) if found else None
+                        wanted_length=dimension_value(row.get("tool"))
+                        wanted_width=dimension_value(row.get("arz"))
+                        if len(matches)>1 and (wanted_length is not None or wanted_width is not None):
+                            matches=[x for x in matches
+                                if (wanted_length is None or dimension_value(x.tool)==wanted_length)
+                                and (wanted_width is None or dimension_value(x.arz)==wanted_width)]
+                        if len(matches)!=1: raise ValueError(f"ردیف {row['radif']}: کد کالا چند موجودی دارد؛ کد، مشخصات، طول و عرض را مطابق ایندکس انتخاب کنید.")
                         stock=matches[0]
                     elif len(candidates)==1: stock=candidates[0]
                     else: raise ValueError(f"ردیف {row['radif']}: کد کالا در ایندکس موجودی پیدا نشد.")
@@ -1478,7 +1491,7 @@ def create_app(test_config=None):
         try:
             seed_path = BASE_DIR / "data" / "initial_inventory.csv"
             seed_marker = AuditLog.query.filter_by(
-                action="initial_inventory_replaced_v2",
+                action="initial_inventory_replaced_v3",
                 entity="Inventory",
             ).first()
             if (
@@ -1517,9 +1530,9 @@ def create_app(test_config=None):
                             mogheiyat=location,
                         ))
                 db.session.add(AuditLog(
-                    action="initial_inventory_replaced_v2",
+                    action="initial_inventory_replaced_v3",
                     entity="Inventory",
-                    detail="فهرست اولیه موجودی با نسخه ۲ جایگزین شد؛ ۱۶ ردیف مرجع لیدان.",
+                    detail="فهرست اولیه موجودی با نسخه ۳ جایگزین شد؛ ۲۰ ردیف سایزدار لیدان بر اساس فهرست به‌روزشده.",
                 ))
                 db.session.commit()
         except Exception:
