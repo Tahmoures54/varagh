@@ -529,13 +529,19 @@ def create_app(test_config=None):
 
 
         # ----- چندردیفی کردن کالا با سازگاری با حواله‌های قدیمی -----
-        row_fields = ["item_code_kala", "item_sharh_kala", "item_moshakhasat_varagh", "item_mogheiyat_varagh", "item_tedad_baste", "item_vazn_esnadi"]
+        row_fields = [
+            "item_code_kala", "item_sharh_kala", "item_moshakhasat_varagh",
+            "item_mogheiyat_varagh", "item_tedad_baste", "item_vazn_esnadi",
+            "item_noe_varagh", "item_grade_varagh", "item_zekhamat", "item_tool",
+            "item_arz", "item_tedad_sheet", "item_vazn_har_sheet", "item_tozihat",
+        ]
         row_values = [request.form.getlist(field) for field in row_fields]
         submitted_rows = []
         for idx in range(max([len(v) for v in row_values] or [0])):
-            vals = [(row_values[k][idx] if idx < len(row_values[k]) else "").strip() for k in range(6)]
+            vals = [(row_values[k][idx] if idx < len(row_values[k]) else "").strip() for k in range(len(row_fields))]
             if not any(vals): continue
-            code, name, spec, location, qty_raw, weight_raw = vals
+            code, name, spec, location, qty_raw, weight_raw = vals[:6]
+            noe_varagh, grade_varagh, thickness_raw, length_raw, width_raw, sheets_raw, sheet_weight_raw, row_notes = vals[6:]
             if not code: raise ValueError(f"کد کالا در ردیف {idx + 1} انتخاب نشده است.")
             try: qty = int(qty_raw) if qty_raw else None
             except ValueError: raise ValueError(f"تعداد بسته در ردیف {idx + 1} باید عدد صحیح باشد.")
@@ -543,8 +549,27 @@ def create_app(test_config=None):
             try: weight = float(weight_raw.replace(",", "")) if weight_raw else None
             except ValueError: raise ValueError(f"وزن اسنادی ردیف {idx + 1} باید عددی باشد.")
             if weight is not None and (not math.isfinite(weight) or weight < 0): raise ValueError(f"وزن اسنادی ردیف {idx + 1} معتبر نیست.")
-            submitted_rows.append({"radif":len(submitted_rows)+1,"code_kala":code[:30],"sharh_kala":name[:100] or None,
-                "moshakhasat_varagh":spec[:200] or None,"mogheiyat_varagh":location[:200] or None,"tedad_baste":qty,"vazn_esnadi":weight})
+            def optional_row_number(raw, label, row_number):
+                if not raw: return None
+                try: number = float(raw.replace(",", ""))
+                except ValueError: raise ValueError(f"{label} در ردیف {row_number} باید عددی باشد.")
+                if not math.isfinite(number) or number < 0:
+                    raise ValueError(f"{label} در ردیف {row_number} معتبر نیست.")
+                return number
+            submitted_rows.append({
+                "radif": len(submitted_rows)+1, "code_kala": code[:30],
+                "sharh_kala": name[:100] or None,
+                "moshakhasat_varagh": spec[:200] or None,
+                "mogheiyat_varagh": location[:200] or None, "tedad_baste": qty,
+                "noe_varagh": noe_varagh[:100] or None,
+                "grade_varagh": grade_varagh[:100] or None,
+                "zekhamat": optional_row_number(thickness_raw, "ضخامت", idx+1),
+                "tool": optional_row_number(length_raw, "طول", idx+1),
+                "arz": optional_row_number(width_raw, "عرض", idx+1),
+                "tedad_sheet": optional_row_number(sheets_raw, "تعداد ورق", idx+1),
+                "vazn_har_sheet": optional_row_number(sheet_weight_raw, "وزن هر ورق", idx+1),
+                "tozihat": row_notes[:1000] or None, "vazn_esnadi": weight,
+            })
         has_multi_rows = bool(submitted_rows)
         # نقش‌هایی که اجازه تغییر کد/وزن/تعداد کالا را ندارند، از طریق فیلدهای تکرارشونده هم نمی‌توانند این محدودیت را دور بزنند.
         if has_multi_rows and any(not can_edit(field) for field in ("code_kala", "vazn_esnadi", "tedad_baste")):
@@ -1430,6 +1455,20 @@ def create_app(test_config=None):
                 if column_name not in inventory_columns:
                     db.session.execute(
                         text(f"ALTER TABLE inventory ADD COLUMN {column_name} VARCHAR(30)")
+                    )
+            # افزوده‌شدن مشخصات تفکیکی فرم خام به ردیف‌های حواله، بدون حذف داده‌های قبلی.
+            item_columns = {
+                c["name"] for c in sqlalchemy_inspect(db.engine).get_columns("havaleh_item")
+            }
+            item_column_types = {
+                "noe_varagh": "VARCHAR(100)", "grade_varagh": "VARCHAR(100)",
+                "zekhamat": "FLOAT", "tool": "FLOAT", "arz": "FLOAT",
+                "tedad_sheet": "FLOAT", "vazn_har_sheet": "FLOAT", "tozihat": "TEXT",
+            }
+            for column_name, column_type in item_column_types.items():
+                if column_name not in item_columns:
+                    db.session.execute(
+                        text(f"ALTER TABLE havaleh_item ADD COLUMN {column_name} {column_type}")
                     )
             db.session.commit()
         except Exception:
