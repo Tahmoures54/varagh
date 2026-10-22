@@ -10,6 +10,7 @@ import os
 import re
 import secrets
 import uuid
+import unicodedata
 from datetime import date, datetime, time, timezone
 from functools import wraps
 from pathlib import Path
@@ -1649,21 +1650,27 @@ def jalali_to_gregorian(jy, jm, jd):
 
 
 def parse_flexible_date(raw):
-    """Accept Jalali YYYY/MM/DD (Persian or Latin digits) and legacy ISO Gregorian dates."""
-    raw = (raw or "").strip().translate(
-        str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
-    )
+    """Accept Jalali dates with Persian/Arabic/Latin digits and common slash variants."""
+    raw = (raw or "").strip()
     if not raw:
         return None
+
+    # Some keyboards/browsers insert invisible direction marks around RTL dates.
+    raw = "".join(ch for ch in raw if unicodedata.category(ch) != "Cf")
+    raw = raw.translate(str.maketrans(
+        "۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩／⁄∕٫",
+        "01234567890123456789///."
+    ))
+    raw = raw.replace("\\", "/").replace(".", "/").replace(" ", "")
     if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
         return date.fromisoformat(raw)
-    match = re.fullmatch(r"(\d{4})[/-](\d{1,2})[/-](\d{1,2})", raw)
+    match = re.fullmatch(r"(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})", raw)
     if not match:
         raise ValueError(
             "تاریخ را به شکل شمسی سال/ماه/روز وارد کنید؛ نمونه: ۱۴۰۵/۰۷/۲۶"
         )
     jy, jm, jd = map(int, match.groups())
-    if not (1 <= jm <= 12 and 1 <= jd <= (31 if jm <= 6 else 30 if jm <= 11 else 30)):
+    if not (1 <= jm <= 12 and 1 <= jd <= (31 if jm <= 6 else 30)):
         raise ValueError("تاریخ شمسی واردشده معتبر نیست.")
     converted = jalali_to_gregorian(jy, jm, jd)
     if gregorian_to_jalali(converted.year, converted.month, converted.day) != (jy, jm, jd):

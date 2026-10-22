@@ -3,7 +3,7 @@ import io
 
 import pytest
 
-from app import create_app
+from app import create_app, parse_flexible_date
 from models import User, db, Havaleh, Inventory
 
 
@@ -51,6 +51,24 @@ def login(client, username="admin"):
         "password": "strong-test-password",
     }, follow_redirects=False)
     assert response.status_code == 302
+
+
+@pytest.mark.parametrize("value", [
+    "۱۴۰۵/۰۷/۲۶",
+    "1405/07/26",
+    "١٤٠٥/٠٧/٢٦",
+    "۱۴۰۵／۰۷／۲۶",
+    "۱۴۰۵⁄۰۷⁄۲۶",
+    "\u200f۱۴۰۵/۰۷/۲۶\u200f",
+    "۱۴۰۵-۰۷-۲۶",
+])
+def test_parse_flexible_jalali_date_formats(value):
+    assert parse_flexible_date(value) is not None
+
+
+def test_parse_flexible_jalali_date_rejects_invalid_day():
+    with pytest.raises(ValueError, match="تاریخ شمسی"):
+        parse_flexible_date("۱۴۰۵/۰۷/۳۲")
 
 
 def test_login_and_dashboard(client):
