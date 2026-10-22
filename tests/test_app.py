@@ -373,4 +373,4 @@ def test_delivery_item_stores_raw_form_specifications(client, app):
     with app.app_context():
         row = HavalehItem.query.one()
         assert (row.noe_varagh, row.grade_varagh, row.zekhamat, row.tool, row.arz) == ("ورق سیاه", "ST37", 10, 6, 1.5)
-        assert (row.tedad_sheet, row.vazn_har_sheet, row.tozihat) == (20, 120, "بارگیری از محل لیدان")
+        assert (row.tedad_sheet, row.vazn_har_sheet, row.tozihat, row.vazn_esnadi) == (2, 120, "بارگیری از محل لیدان", 240)

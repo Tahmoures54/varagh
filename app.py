@@ -560,10 +560,13 @@ def create_app(test_config=None):
             # در این سامانه هر بسته معادل یک ورق است؛ مقدار ارسالی تعداد ورق قابل اعتماد نیست.
             sheets = qty
             sheet_weight = optional_row_number(sheet_weight_raw, "وزن هر ورق", idx+1)
-            if qty is not None and sheet_weight is not None:
+            if sheet_weight is not None:
+                if qty is None:
+                    raise ValueError(f"برای محاسبه وزن اسنادی ردیف {idx + 1}، ابتدا تعداد بسته را وارد کنید.")
                 weight = round(qty * sheet_weight, 3)
-            elif qty is not None or sheet_weight is not None:
-                raise ValueError(f"برای محاسبه وزن اسنادی ردیف {idx + 1}، تعداد بسته و وزن هر ورق را هر دو وارد کنید.")
+            # سازگاری با فرم‌ها و API قدیمی: اگر وزن ردیف صریحاً ارسال شده و
+            # وزن هر ورق موجود نیست، همان وزن ارسالی را حفظ کن.
+            # در فرم جدید، وزن هر ورق وجود دارد و وزن از تعداد بسته محاسبه می‌شود.
             submitted_rows.append({
                 "radif": len(submitted_rows)+1, "code_kala": code[:30],
                 "sharh_kala": (name or noe_varagh)[:100] or None,
