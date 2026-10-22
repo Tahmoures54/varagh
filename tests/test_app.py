@@ -326,3 +326,33 @@ def test_multi_item_voucher_insufficient_stock_deducts_nothing(client, app):
         assert Havaleh.query.filter_by(shomare_havaleh="MULTI-FAIL").count() == 0
         stocks = {x.code_kala: x.mojudi_vaghei for x in Inventory.query.all()}
         assert stocks == {"MULTI-C": 1000, "MULTI-D": 50}
+
+
+def test_delivery_item_stores_raw_form_specifications(client, app):
+    login(client)
+    with app.app_context():
+        db.session.add(Inventory(
+            code_kala="RAW-1", name_kala="ورق سیاه", moshakhasat="ST37",
+            zekhamat=10, tool="6", arz="1.5", tedad_sheet=20,
+            vazn_har_sheet=120, mojudi_vaghei=5000, mogheiyat="لیدان",
+        ))
+        db.session.commit()
+    token = csrf(client, "/havaleh/new")
+    response = client.post("/havaleh/new", data={
+        "_csrf_token": token, "shomare_havaleh": "RAW-FIELDS-1",
+        "item_code_kala": ["RAW-1"], "item_sharh_kala": ["ورق سیاه"],
+        "item_moshakhasat_varagh": ["ST37"], "item_mogheiyat_varagh": ["لیدان"],
+        "item_tedad_baste": ["2"], "item_vazn_esnadi": ["2400"],
+        "item_noe_varagh": ["ورق سیاه"], "item_grade_varagh": ["ST37"],
+        "item_zekhamat": ["10"], "item_tool": ["6"], "item_arz": ["1.5"],
+        "item_tedad_sheet": ["20"], "item_vazn_har_sheet": ["120"],
+        "item_tozihat": ["بارگیری از محل لیدان"],
+        "vaziyat_havaleh": "ثبت‌شده", "vaziyat_moghayerat": "بدون مغایرت",
+        "ghabz_por_piost": "خیر", "ghabz_khali_piost": "خیر",
+    })
+    assert response.status_code == 302
+    from models import HavalehItem
+    with app.app_context():
+        row = HavalehItem.query.one()
+        assert (row.noe_varagh, row.grade_varagh, row.zekhamat, row.tool, row.arz) == ("ورق سیاه", "ST37", 10, 6, 1.5)
+        assert (row.tedad_sheet, row.vazn_har_sheet, row.tozihat) == (20, 120, "بارگیری از محل لیدان")
