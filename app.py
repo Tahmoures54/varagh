@@ -923,9 +923,9 @@ def create_app(test_config=None):
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow([
-            "code_kala", "name_kala", "zekhamat", "moshakhasat", "vahed",
-            "mojudi_vaghei", "tedad_sheet", "vazn_har_sheet", "vazn_goruh",
-            "mogheiyat", "radif",
+            "code_kala", "name_kala", "tool", "arz", "zekhamat", "moshakhasat",
+            "vahed", "mojudi_vaghei", "tedad_sheet", "vazn_har_sheet",
+            "vazn_goruh", "mogheiyat", "radif",
         ])
         response = make_response("\ufeff" + output.getvalue())
         response.headers["Content-Type"] = "text/csv; charset=utf-8"
@@ -1034,6 +1034,8 @@ def create_app(test_config=None):
                 prepared.append({
                     "code_kala": code,
                     "name_kala": cell_text(record.get("name_kala"))[:100] or None,
+                    "tool": cell_text(record.get("tool"))[:30] or None,
+                    "arz": cell_text(record.get("arz"))[:30] or None,
                     "zekhamat": cell_number(record.get("zekhamat"), "zekhamat", row_number),
                     "moshakhasat": spec or None,
                     "vahed": cell_text(record.get("vahed"))[:20] or "کیلو گرم",
@@ -1421,6 +1423,14 @@ def create_app(test_config=None):
                     db.session.execute(
                         text(f"ALTER TABLE havaleh ADD COLUMN {column_name} {column_type}")
                     )
+            inventory_columns = {
+                c["name"] for c in sqlalchemy_inspect(db.engine).get_columns("inventory")
+            }
+            for column_name in ("tool", "arz"):
+                if column_name not in inventory_columns:
+                    db.session.execute(
+                        text(f"ALTER TABLE inventory ADD COLUMN {column_name} VARCHAR(30)")
+                    )
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -1428,22 +1438,24 @@ def create_app(test_config=None):
 
         try:
             seed_path = BASE_DIR / "data" / "initial_inventory.csv"
-            if seed_path.is_file() and not app.config.get("TESTING"):
-                # فهرست مرجع فعلی فقط موجودی لیدان است؛ ردیف‌های قدیمی سایر
-                # موقعیت‌ها و ردیف‌های ترکیبی لیدان/ساب‌استیشن از ایندکس حذف شوند.
-                Inventory.query.filter(or_(
-                    Inventory.mogheiyat.is_(None),
-                    ~Inventory.mogheiyat.ilike("%لیدان%"),
-                    Inventory.mogheiyat.ilike("%ساب%"),
-                )).delete(synchronize_session=False)
+            seed_marker = AuditLog.query.filter_by(
+                action="initial_inventory_replaced_v2",
+                entity="Inventory",
+            ).first()
+            if (
+                seed_path.is_file()
+                and not app.config.get("TESTING")
+                and seed_marker is None
+            ):
+                # مهاجرت یک‌بارهٔ فهرست مرجع موجودی به فهرست جدید لیدان.
+                # پس از ثبت نشانگر، راه‌اندازی‌های بعدی موجودی عملیاتی را بازنویسی نمی‌کنند.
+                Inventory.query.delete(synchronize_session=False)
                 with seed_path.open("r", encoding="utf-8-sig", newline="") as seed_file:
                     for record in csv.DictReader(seed_file):
                         code = (record.get("code_kala") or "").strip()
                         spec = (record.get("moshakhasat") or "").strip() or None
                         location = (record.get("mogheiyat") or "").strip() or None
-                        if not code or Inventory.query.filter_by(
-                            code_kala=code, moshakhasat=spec, mogheiyat=location,
-                        ).first():
+                        if not code:
                             continue
 
                         def seed_num(key):
@@ -1454,6 +1466,8 @@ def create_app(test_config=None):
                             radif=int(seed_num("radif") or 0) or None,
                             code_kala=code[:30],
                             name_kala=(record.get("name_kala") or "").strip()[:100] or None,
+                            tool=(record.get("tool") or "").strip()[:30] or None,
+                            arz=(record.get("arz") or "").strip()[:30] or None,
                             zekhamat=seed_num("zekhamat"),
                             moshakhasat=spec,
                             vahed=(record.get("vahed") or "کیلو گرم").strip()[:20],
@@ -1463,6 +1477,11 @@ def create_app(test_config=None):
                             vazn_goruh=seed_num("vazn_goruh"),
                             mogheiyat=location,
                         ))
+                db.session.add(AuditLog(
+                    action="initial_inventory_replaced_v2",
+                    entity="Inventory",
+                    detail="فهرست اولیه موجودی با نسخه ۲ جایگزین شد؛ ۱۶ ردیف مرجع لیدان.",
+                ))
                 db.session.commit()
         except Exception:
             db.session.rollback()
