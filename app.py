@@ -617,7 +617,7 @@ def create_app(test_config=None):
                         def dimension_value(value):
                             if value is None or str(value).strip()=="":
                                 return None
-                            found=re.search(r"[-+]?\\d+(?:\\.\\d+)?",str(value).replace(",",""))
+                            found=re.search(r"[-+]?\d+(?:\.\d+)?",str(value).replace(",",""))
                             return float(found.group(0)) if found else None
                         wanted_length=dimension_value(row.get("tool"))
                         wanted_width=dimension_value(row.get("arz"))
