@@ -93,7 +93,7 @@ def test_blank_print_form_matches_online_registration_fields(client):
     login(client)
     response = client.get("/havaleh/blank-print")
     assert response.status_code == 200
-    for label in ["ایندکس / کد کالا", "نوع وسیله", "محل موجودی", "وزن اسنادی", "وزن پُر باسکول", "وزن خالی باسکول", "وضعیت مغایرت", "مسئول پیگیری", "تأییدکننده نهایی"]:
+    for label in ["ایندکس / کد کالا", "نوع ورق", "گرید / استاندارد", "ضخامت (میلی‌متر)", "طول (متر)", "عرض (متر)", "تعداد ورق", "وزن هر ورق (کیلوگرم)", "تعداد بسته", "نوع وسیله", "محل موجودی", "وزن اسنادی", "وزن پُر باسکول", "وزن خالی باسکول", "وضعیت مغایرت", "مسئول پیگیری", "تأییدکننده نهایی"]:
         assert label.encode("utf-8") in response.data
 
 
