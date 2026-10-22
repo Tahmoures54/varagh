@@ -558,8 +558,8 @@ def create_app(test_config=None):
                 return number
             submitted_rows.append({
                 "radif": len(submitted_rows)+1, "code_kala": code[:30],
-                "sharh_kala": name[:100] or None,
-                "moshakhasat_varagh": spec[:200] or None,
+                "sharh_kala": (name or noe_varagh)[:100] or None,
+                "moshakhasat_varagh": (spec or grade_varagh)[:200] or None,
                 "mogheiyat_varagh": location[:200] or None, "tedad_baste": qty,
                 "noe_varagh": noe_varagh[:100] or None,
                 "grade_varagh": grade_varagh[:100] or None,
