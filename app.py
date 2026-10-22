@@ -557,12 +557,13 @@ def create_app(test_config=None):
                 if not math.isfinite(number) or number < 0:
                     raise ValueError(f"{label} در ردیف {row_number} معتبر نیست.")
                 return number
-            sheets = optional_row_number(sheets_raw, "تعداد ورق", idx+1)
+            # در این سامانه هر بسته معادل یک ورق است؛ مقدار ارسالی تعداد ورق قابل اعتماد نیست.
+            sheets = qty
             sheet_weight = optional_row_number(sheet_weight_raw, "وزن هر ورق", idx+1)
-            if sheets is not None and sheet_weight is not None:
-                weight = round(sheets * sheet_weight, 3)
-            elif sheets is not None or sheet_weight is not None:
-                raise ValueError(f"برای محاسبه وزن اسنادی ردیف {idx + 1}، تعداد ورق و وزن هر ورق را هر دو وارد کنید.")
+            if qty is not None and sheet_weight is not None:
+                weight = round(qty * sheet_weight, 3)
+            elif qty is not None or sheet_weight is not None:
+                raise ValueError(f"برای محاسبه وزن اسنادی ردیف {idx + 1}، تعداد بسته و وزن هر ورق را هر دو وارد کنید.")
             submitted_rows.append({
                 "radif": len(submitted_rows)+1, "code_kala": code[:30],
                 "sharh_kala": (name or noe_varagh)[:100] or None,
